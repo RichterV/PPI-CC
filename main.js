@@ -154,7 +154,8 @@ function drawWalls(){
     c.setLineDash(o.type==='door'?[6*zoom,4*zoom]:[3*zoom,3*zoom]);
     c.beginPath(); c.moveTo(sx1,sy1); c.lineTo(sx2,sy2); c.stroke(); c.setLineDash([]);
     const mx=(sx1+sx2)/2,my=(sy1+sy2)/2;
-    c.font=`${11*Math.max(zoom,0.4)}px serif`;c.textAlign='center';c.textBaseline='middle';
+    c.font=`${11*Math.max(zoom,0.4)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",serif`;
+    c.textAlign='center';c.textBaseline='middle';
     c.fillText(o.type==='door'?'🚪':'🪟',mx,my);
   });
 }
@@ -168,6 +169,13 @@ function getImg(src,cb){
 }
 const fallbackIcons={router:'📡',pc:'🖥',notebook:'💻',printer:'🖨',switch:'🔀'};
 const DEV_COLORS={router:'#3b82f6',pc:'#22c55e',notebook:'#6366f1',printer:'#f59e0b',switch:'#06b6d4'};
+function svgUri(s){return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s);}
+const deviceSvgIcons={
+  pc:svgUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="10" y="8" width="80" height="56" rx="7" fill="#1a2a1a" stroke="#22c55e" stroke-width="2.5"/><rect x="18" y="16" width="64" height="40" rx="3" fill="#0a1a0a"/><rect x="38" y="64" width="24" height="8" rx="2" fill="#22c55e"/><rect x="26" y="72" width="48" height="7" rx="3.5" fill="#22c55e"/></svg>`),
+  notebook:svgUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="8" y="8" width="84" height="58" rx="7" fill="#1a1a2e" stroke="#6366f1" stroke-width="2.5"/><rect x="16" y="16" width="68" height="42" rx="3" fill="#0a0a1a"/><rect x="2" y="66" width="96" height="18" rx="7" fill="#6366f1"/><rect x="30" y="69" width="40" height="12" rx="4" fill="#1a1a2e"/></svg>`),
+  printer:svgUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="22" y="14" width="56" height="22" rx="4" fill="#2a1a00" stroke="#f59e0b" stroke-width="2"/><rect x="10" y="34" width="80" height="40" rx="7" fill="#2a1a00" stroke="#f59e0b" stroke-width="2.5"/><rect x="22" y="62" width="56" height="24" rx="4" fill="#1a0f00" stroke="#f59e0b" stroke-width="1.5"/><rect x="30" y="70" width="40" height="5" rx="2.5" fill="#f59e0b"/><circle cx="74" cy="51" r="5" fill="#f59e0b"/></svg>`),
+  switch:svgUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="4" y="28" width="92" height="44" rx="7" fill="#001a1a" stroke="#06b6d4" stroke-width="2.5"/><circle cx="18" cy="50" r="5" fill="#10b981"/><circle cx="32" cy="50" r="5" fill="#10b981"/><circle cx="46" cy="50" r="5" fill="#10b981"/><circle cx="60" cy="50" r="5" fill="#10b981"/><circle cx="74" cy="50" r="5" fill="#f59e0b"/><rect x="10" y="36" width="80" height="5" rx="2.5" fill="#003333"/><rect x="10" y="59" width="80" height="5" rx="2.5" fill="#003333"/></svg>`)
+};
 function devColor(d){return(d.type==='router'&&d.freq==='5')?'#8b5cf6':DEV_COLORS[d.type]||'#64748b';}
 function fillRR(c,x,y,w,h,r){
   r=Math.min(r,w/2,h/2);
@@ -205,17 +213,30 @@ function drawDevices(){
     c.strokeStyle=col; c.lineWidth=1.5; c.stroke();
 
     // ícone
-    const drawIcon=()=>{
-      c.font=`${sz*0.88}px serif`; c.textAlign='center'; c.textBaseline='middle';
+    const drawEmoji=()=>{
+      c.font=`${sz*0.88}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",serif`;
+      c.textAlign='center'; c.textBaseline='middle';
       c.fillText(d.icon||fallbackIcons[d.type]||'❓',sx,sy);
     };
-    if(d.imgSrc){
-      getImg(d.imgSrc,img=>{
-        if(img){const is=sz*0.82; c.drawImage(img,sx-is/2,sy-is/2,is,is);}
-        else drawIcon();
-        drawDeviceLbl(c,d,sx,sy,cw,ch,col);
-      });
-    } else { drawIcon(); drawDeviceLbl(c,d,sx,sy,cw,ch,col); }
+    const renderIcon=(thenLbl)=>{
+      if(d.imgSrc){
+        getImg(d.imgSrc,img=>{
+          if(img){const is=sz*0.82;c.drawImage(img,sx-is/2,sy-is/2,is,is);}
+          else drawEmoji();
+          if(thenLbl)drawDeviceLbl(c,d,sx,sy,cw,ch,col);
+        });
+      } else {
+        const svgSrc=!d.icon&&deviceSvgIcons[d.type];
+        if(svgSrc){
+          getImg(svgSrc,img=>{
+            if(img){const is=sz*0.78;c.drawImage(img,sx-is/2,sy-is/2,is,is);}
+            else drawEmoji();
+            if(thenLbl)drawDeviceLbl(c,d,sx,sy,cw,ch,col);
+          });
+        } else {drawEmoji();if(thenLbl)drawDeviceLbl(c,d,sx,sy,cw,ch,col);}
+      }
+    };
+    renderIcon(true);
 
     // badge de canal
     if(d.type==='router'&&d.channel&&d.channel!==0){
