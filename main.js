@@ -32,8 +32,10 @@ function renderFloorTabs(){
 
 function switchFloor(i){
   currentFloor = i;
+  hmapCache = null;
   renderFloorTabs();
   selectEl(null,-1);
+  calcHeatmap();
   redrawAll();
   updateMpointsList();
 }
@@ -46,6 +48,7 @@ const hmC    = document.getElementById('heatmap-canvas');
 const wallC  = document.getElementById('wall-canvas');
 const devC   = document.getElementById('device-canvas');
 const mpC    = document.getElementById('mpoint-canvas');
+const lblC   = document.getElementById('label-canvas');
 const intC   = document.getElementById('interact-canvas');
 const ctxBg    = bgC.getContext('2d');
 const ctxBgImg = bgImgC.getContext('2d');
@@ -53,13 +56,14 @@ const ctxHm    = hmC.getContext('2d');
 const ctxWall  = wallC.getContext('2d');
 const ctxDev   = devC.getContext('2d');
 const ctxMp    = mpC.getContext('2d');
+const ctxLbl   = lblC.getContext('2d');
 const ctxInt   = intC.getContext('2d');
 
 let W=0, H=0;
 
 function resize(){
   W=wrap.clientWidth; H=wrap.clientHeight;
-  [bgC,bgImgC,hmC,wallC,devC,mpC,intC].forEach(c=>{c.width=W;c.height=H});
+  [bgC,bgImgC,hmC,wallC,devC,mpC,lblC,intC].forEach(c=>{c.width=W;c.height=H});
   redrawAll();
 }
 
@@ -70,7 +74,7 @@ function worldToCm(w){ return (w/GRID)*gridCm; }
 function worldToM(w){ return worldToCm(w)/100; }
 
 function redrawAll(){
-  drawBg();drawBgImg();drawWalls();drawDevices();drawMpoints();calcHeatmap();
+  drawBg();drawBgImg();drawWalls();drawDevices();drawMpoints();drawRoomLabels();drawHeatmapLayer();
   drawDistPreview();
 }
 
@@ -262,6 +266,62 @@ function drawMpoints(){
   });
 }
 
+// ===================== ROOM LABELS =====================
+let showRoomLabels = false;
+
+function toggleRoomLabels(){
+  showRoomLabels = !showRoomLabels;
+  document.getElementById('btn-rooms').classList.toggle('active', showRoomLabels);
+  drawRoomLabels();
+}
+
+function drawRoomLabels(){
+  const c = ctxLbl;
+  c.clearRect(0, 0, W, H);
+  if(!showRoomLabels) return;
+
+  const labels = fl().labels || [];
+  if(!labels.length) return;
+
+  const zf  = Math.max(zoom, 0.3);
+  const fz  = Math.round(Math.max(10, 13 * zf));
+  const pad = Math.max(5, 9 * zf);
+
+  labels.forEach(lbl => {
+    const [sx, sy] = toScreen(lbl.x, lbl.y);
+    if(sx < -200 || sx > W + 200 || sy < -60 || sy > H + 60) return;
+
+    c.font = `700 ${fz}px var(--font)`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+
+    const tw = c.measureText(lbl.text).width;
+    const ph = fz + pad * 1.8;
+    const pw = tw + pad * 2.6;
+    const rx = sx - pw / 2, ry = sy - ph / 2;
+    const r  = ph / 2;
+
+    // Fundo com brilho
+    c.save();
+    c.shadowColor = 'rgba(96,165,250,.5)';
+    c.shadowBlur  = 14 * zf;
+    fillRR(c, rx, ry, pw, ph, r);
+    c.fillStyle = 'rgba(10,13,22,.88)';
+    c.fill();
+    c.restore();
+
+    // Borda
+    fillRR(c, rx, ry, pw, ph, r);
+    c.strokeStyle = 'rgba(148,163,184,.4)';
+    c.lineWidth = 1;
+    c.stroke();
+
+    // Texto
+    c.fillStyle = '#f1f5f9';
+    c.fillText(lbl.text, sx, sy);
+  });
+}
+
 // ===================== TOOLS =====================
 let tool='measure';
 let selectedIdx=-1, selectedType=null;
@@ -308,11 +368,7 @@ function drawDistPreview(){
 }
 
 function measureStatusMsg(){
-  const labels = {
-    simulation:   'dBm simulado',
-    real:         'dBm real (calibrado)',
-    interference: 'interferência de canal',
-  };
+  const labels = { simulation: 'dBm simulado', real: 'dBm real (calibrado)' };
   return '📍 Medir: clique em qualquer ponto para ver o ' + (labels[heatmapMode] || 'dBm simulado');
 }
 
@@ -321,6 +377,7 @@ function setFreq(f){
   document.getElementById('freq-24-btn').classList.toggle('active',f==='2.4');
   document.getElementById('freq-5-btn').classList.toggle('active',f==='5');
   if(selectedType==='mpoint'&&selectedIdx>=0) selectEl('mpoint',selectedIdx);
+  calcHeatmap();
   redrawAll();
   updateMpointsList();
 }
@@ -350,16 +407,6 @@ function setTool(t){
 // ===================== SELECTION =====================
 function selectEl(type,idx){
   selectedType=type; selectedIdx=idx;
-  document.getElementById('no-sel').style.display='none';
-  document.getElementById('mpoint-props').style.display='none';
-  if(type==='mpoint'){
-    const p=fl().mpoints[idx];
-    document.getElementById('mpoint-props').style.display='block';
-    document.getElementById('mp-dbm').value=activeDbm(p);
-    document.getElementById('mp-label').value=p.label||'';
-  } else {
-    document.getElementById('no-sel').style.display='block';
-  }
   drawMpoints();
 }
 
@@ -400,6 +447,14 @@ function hitMpoint(wx,wy){
   }return -1;
 }
 
+function ptSegDist(px,py,ax,ay,bx,by){
+  const dx=bx-ax, dy=by-ay;
+  const lenSq=dx*dx+dy*dy;
+  if(lenSq<1e-10) return Math.hypot(px-ax,py-ay);
+  const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/lenSq));
+  return Math.hypot(px-(ax+t*dx),py-(ay+t*dy));
+}
+
 // ===================== MOUSE EVENTS =====================
 intC.addEventListener('contextmenu',e=>e.preventDefault());
 
@@ -407,7 +462,7 @@ intC.addEventListener('mousedown',e=>{
   e.preventDefault();
   const[sx,sy]=[e.offsetX,e.offsetY];
   const[wx,wy]=toWorld(sx,sy);
-  if(e.button===2){panning=true;panSX=sx;panSY=sy;panOX=panX;panOY=panY;intC.style.cursor='grabbing';return}
+  if(e.button===2){panning=true;panSX=sx;panSY=sy;panOX=panX;panOY=panY;showWallTooltip(null,null,0,0);intC.style.cursor='grabbing';return}
 
   const f=fl();
 
@@ -425,9 +480,10 @@ intC.addEventListener('mousedown',e=>{
     return;
   }
 
-  // ---- ferramenta de dBm pontual ----
+  // ---- ferramenta de dBm / interferência pontual ----
   if(tool==='measure'){
     const routers=f.devices.filter(d=>d.type==='router'&&(!d.freq||d.freq==='dual'||d.freq===selectedFreq));
+
     let simSig=-999;
     routers.forEach(r=>{const s=computeSig(r,wx,wy,f.walls,f.openings);if(s>simSig)simSig=s});
     let calibrated=null;
@@ -455,7 +511,22 @@ intC.addEventListener('mousemove',e=>{
   document.getElementById('hud').textContent=`📍 ${worldToM(wx).toFixed(2)} m, ${worldToM(wy).toFixed(2)} m`;
   if(panning){panX=panOX+(sx-panSX);panY=panOY+(sy-panSY);redrawAll();return;}
   if(tool==='dist') drawDistPreview();
+
+  // Tooltip de parede/porta/janela: detecta o elemento mais próximo dentro de 8px de tela
+  const hitR = 8 / zoom;
+  let hovW = null, hovO = null;
+  for(const w of fl().walls){
+    if(ptSegDist(wx,wy,w.x1,w.y1,w.x2,w.y2) <= hitR){ hovW=w; break; }
+  }
+  if(!hovW){
+    for(const o of fl().openings){
+      if(ptSegDist(wx,wy,o.x1,o.y1,o.x2,o.y2) <= hitR){ hovO=o; break; }
+    }
+  }
+  showWallTooltip(hovW, hovO, sx, sy);
 });
+
+intC.addEventListener('mouseleave', () => showWallTooltip(null, null, 0, 0));
 
 intC.addEventListener('mouseup',()=>{
   if(panning){panning=false;intC.style.cursor=tool==='dist'||tool==='mpoint'?'crosshair':tool==='measure'?'cell':'default';}
@@ -520,6 +591,47 @@ function showDistPopup(sx,sy,distM,wx1,wy1,wx2,wy2){
     <div style="color:#94a3b8;font-size:11px">↕ Vertical: ${vertM.toFixed(2)} m</div>`;
   wrap.appendChild(div);distPopup=div;
   setTimeout(()=>{div.remove();if(distPopup===div)distPopup=null},5000);
+}
+
+// ===================== WALL TOOLTIP =====================
+let wallTooltip = null;
+
+function showWallTooltip(wall, opening, sx, sy){
+  if(!wallTooltip){
+    wallTooltip = document.createElement('div');
+    wrap.appendChild(wallTooltip);
+  }
+  if(!wall && !opening){ wallTooltip.style.display='none'; return; }
+
+  let borderColor, inner;
+  if(wall){
+    const wt = wallTypeDefs[wall.type] || wallTypeDefs.custom;
+    borderColor = wt.color;
+    inner = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div style="width:22px;height:5px;border-radius:3px;background:${wt.color};flex-shrink:0"></div>
+        <span style="font-weight:700;font-size:12px;color:${wt.color}">${wt.label}</span>
+      </div>
+      <div style="color:#94a3b8;font-size:10px">Atenuação Wi-Fi: <b style="color:#e2e8f0">−${wt.db} dB</b></div>`;
+  } else {
+    const isDoor = opening.type === 'door';
+    borderColor = isDoor ? '#a0c8f0' : '#60d0ff';
+    inner = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <span style="font-size:14px">${isDoor ? '🚪' : '🪟'}</span>
+        <span style="font-weight:700;font-size:12px;color:${borderColor}">${isDoor ? 'Porta' : 'Janela'}</span>
+      </div>
+      <div style="color:#94a3b8;font-size:10px">Ganho Wi-Fi: <b style="color:#e2e8f0">+${isDoor ? 3 : 1} dB</b></div>`;
+  }
+
+  wallTooltip.style.cssText = `
+    position:absolute;z-index:15;pointer-events:none;display:block;
+    left:${sx+16}px;top:${sy-8}px;
+    background:rgba(15,17,23,.97);border:1px solid ${borderColor};
+    border-radius:8px;padding:8px 12px;
+    box-shadow:0 4px 18px rgba(0,0,0,.55);
+  `;
+  wallTooltip.innerHTML = inner;
 }
 
 // ===================== MPOINT MODAL =====================
@@ -595,6 +707,7 @@ fetch('data.json')
     currentFloor=0;
     renderFloorTabs();selectEl(null,-1);
     fitToView();
+    calcHeatmap();
     redrawAll();updateMpointsList();
   })
   .catch(()=>renderFloorTabs());

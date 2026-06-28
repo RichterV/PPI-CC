@@ -30,10 +30,9 @@ const FORMULAS = {
 
 function setHeatmapMode(mode){
   heatmapMode = mode;
-  ['hm-sim-btn','hm-real-btn','hm-int-btn'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  ['hm-sim-btn','hm-real-btn'].forEach(id=>document.getElementById(id).classList.remove('active'));
   if(mode==='simulation') document.getElementById('hm-sim-btn').classList.add('active');
   if(mode==='real')       document.getElementById('hm-real-btn').classList.add('active');
-  if(mode==='interference') document.getElementById('hm-int-btn').classList.add('active');
 
   const wrap = document.getElementById('formula-wrap');
   const formula = FORMULAS[mode];
@@ -54,33 +53,51 @@ function setHeatmapMode(mode){
 // ---- Renderiza em canvas reduzido e escala com suavização bilinear ----
 const HMAP_SCALE = 10;
 
-function renderHeatmap(c, pixelFn){
-  if(!W || !H) return;
-  const sw = Math.max(1, Math.ceil(W / HMAP_SCALE));
-  const sh = Math.max(1, Math.ceil(H / HMAP_SCALE));
+// Amostra pixelFn em coords mundo → retorna canvas offscreen (zoom-independent)
+function renderHeatmap(pixelFn, wx1, wy1, ww, wh){
+  const sw = Math.max(1, Math.ceil(ww / HMAP_SCALE));
+  const sh = Math.max(1, Math.ceil(wh / HMAP_SCALE));
 
-  const tmp  = document.createElement('canvas');
-  tmp.width  = sw;
-  tmp.height = sh;
+  const tmp = document.createElement('canvas');
+  tmp.width = sw; tmp.height = sh;
   const tctx = tmp.getContext('2d');
   const img  = tctx.createImageData(sw, sh);
 
   for(let py = 0; py < sh; py++){
     for(let px = 0; px < sw; px++){
-      const [wx, wy] = toWorld(px * HMAP_SCALE + HMAP_SCALE / 2,
-                               py * HMAP_SCALE + HMAP_SCALE / 2);
+      const wx = wx1 + (px + 0.5) * ww / sw;
+      const wy = wy1 + (py + 0.5) * wh / sh;
       const [r, g, b, a] = pixelFn(wx, wy);
       const idx = (py * sw + px) * 4;
-      img.data[idx] = r; img.data[idx+1] = g; img.data[idx+2] = b; img.data[idx+3] = a;
+      img.data[idx]=r; img.data[idx+1]=g; img.data[idx+2]=b; img.data[idx+3]=a;
     }
   }
-
   tctx.putImageData(img, 0, 0);
-  c.save();
-  c.imageSmoothingEnabled  = true;
-  c.imageSmoothingQuality  = 'high';
-  c.drawImage(tmp, 0, 0, W, H);
-  c.restore();
+
+  // Amplia com suavização bilinear para o tamanho em world-units
+  const out = document.createElement('canvas');
+  out.width = sw * HMAP_SCALE; out.height = sh * HMAP_SCALE;
+  const octx = out.getContext('2d');
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = 'high';
+  octx.drawImage(tmp, 0, 0, out.width, out.height);
+  return out;
+}
+
+// Cache do heatmap em coords mundo — só refeito quando os dados mudam
+let hmapCache = null; // { canvas, wx1, wy1, ww, wh }
+
+// Redesenha do cache para a tela — barato, chamado no zoom/pan
+function drawHeatmapLayer(){
+  ctxHm.clearRect(0, 0, W, H);
+  if(!hmapCache) return;
+  const { canvas, wx1, wy1, ww, wh } = hmapCache;
+  const [sx, sy] = toScreen(wx1, wy1);
+  ctxHm.save();
+  ctxHm.imageSmoothingEnabled = true;
+  ctxHm.imageSmoothingQuality = 'high';
+  ctxHm.drawImage(canvas, sx, sy, ww * zoom, wh * zoom);
+  ctxHm.restore();
 }
 
 function freqRouters(f){
@@ -99,62 +116,34 @@ function computeBounds(f, marginM){
   return [x1-m, y1-m, x2+m, y2+m];
 }
 
-// ---- Cálculo principal ----
+// ---- Cálculo principal (apenas quando dados mudam — não no zoom/pan) ----
 function calcHeatmap(){
-  const c = ctxHm;
-  if(heatmapMode === 'off'){ c.clearRect(0, 0, W, H); return; }
+  hmapCache = null;
+  if(heatmapMode === 'off'){ ctxHm.clearRect(0, 0, W, H); return; }
 
   const f       = fl();
   const routers = freqRouters(f);
 
-  if(heatmapMode === 'real'){ drawRealHeatmap(c, f); return; }
-  if(!routers.length){ c.clearRect(0, 0, W, H); return; }
+  if(heatmapMode === 'real'){ drawRealHeatmap(f); return; }
+  if(!routers.length){ ctxHm.clearRect(0, 0, W, H); return; }
 
   const b = computeBounds(f, 10);
+  if(!b){ ctxHm.clearRect(0, 0, W, H); return; }
+  const [bx1, by1, bx2, by2] = b;
+  const ww = bx2 - bx1, wh = by2 - by1;
 
-  renderHeatmap(c, (wx, wy) => {
-    if(b && (wx<b[0]||wx>b[2]||wy<b[1]||wy>b[3])) return [0,0,0,0];
+  const cv = renderHeatmap((wx, wy) => {
     let maxSig = -999, dominantR = null;
     routers.forEach(r => {
       const sig = computeSig(r, wx, wy, f.walls, f.openings);
       if(sig > maxSig){ maxSig = sig; dominantR = r; }
     });
 
-    if(heatmapMode === 'interference'){
-      if(maxSig < -90) return [0, 0, 0, 0];
-
-      // SIR = S_dominante / Σ(S_interferente × fator_sobreposição)
-      const domLin = Math.pow(10, maxSig / 10);
-      let intLin = 0;
-
-      routers.forEach(r => {
-        if(r === dominantR) return;
-        const s = computeSig(r, wx, wy, f.walls, f.openings);
-        if(s < -95) return; // sinal negligível
-        if(!chOverlap(r.channel||0, dominantR.channel||0, selectedFreq)) return;
-
-        // Sobreposição parcial: canais 2,4 GHz vizinhos interferem menos
-        // Em 5 GHz os canais não se sobrepõem (orthogonal), overlap=1 apenas quando iguais
-        const diff = selectedFreq !== '5'
-          ? Math.abs((r.channel||0) - (dominantR.channel||0))
-          : 0;
-        const overlapFactor = selectedFreq !== '5' ? Math.max(0, 1 - diff / 5) : 1.0;
-
-        intLin += Math.pow(10, s / 10) * overlapFactor;
-      });
-
-      if(intLin === 0) return [16, 185, 129, 190]; // sem interferentes válidos → verde
-
-      // Limiares IEEE 802.11 (SIR em dB)
-      const sirDb = 10 * Math.log10(domLin / intLin);
-      if(sirDb >= 20) return [16,  185, 129, 190]; // ótimo  — sem impacto
-      if(sirDb >= 10) return [245, 158, 11,  200]; // moderado — throughput reduzido
-      if(sirDb >=  5) return [249, 115, 22,  200]; // severo  — apenas MCS baixos
-      return                 [239, 68,  68,  210]; // crítico — degradação máxima
-    }
-
     return sigToRGBA(maxSig);
-  });
+  }, bx1, by1, ww, wh);
+
+  hmapCache = { canvas: cv, wx1: bx1, wy1: by1, ww, wh };
+  drawHeatmapLayer();
 }
 
 // ---- Modelo Log-Distance Indoor (ITU-R P.1238) ----
@@ -181,12 +170,10 @@ function computeSig(r, wx, wy, walls, openings){
 }
 
 // ---- Mapa Real: simulação + correção IDW por distância ----
-// IDW sem penalidade de paredes: a física das paredes já está em computeSig;
-// o IDW corrige apenas o viés global (Δ = medido − simulado em cada âncora).
-function drawRealHeatmap(c, f){
+function drawRealHeatmap(f){
   const pts     = f.mpoints;
   const routers = freqRouters(f);
-  if(!pts.length){ c.clearRect(0, 0, W, H); return; }
+  if(!pts.length){ ctxHm.clearRect(0, 0, W, H); return; }
 
   const corrections = pts.map(p => {
     const measured = activeDbm(p);
@@ -201,9 +188,11 @@ function drawRealHeatmap(c, f){
 
   const idwPow = 2;
   const b = computeBounds(f, 10);
+  if(!b){ ctxHm.clearRect(0, 0, W, H); return; }
+  const [bx1, by1, bx2, by2] = b;
+  const ww = bx2 - bx1, wh = by2 - by1;
 
-  renderHeatmap(c, (wx, wy) => {
-    if(b && (wx<b[0]||wx>b[2]||wy<b[1]||wy>b[3])) return [0,0,0,0];
+  const cv = renderHeatmap((wx, wy) => {
     let simSig = -999;
     if(routers.length)
       routers.forEach(r => {
@@ -232,7 +221,10 @@ function drawRealHeatmap(c, f){
     }
 
     return sigToRGBA(finalDbm);
-  });
+  }, bx1, by1, ww, wh);
+
+  hmapCache = { canvas: cv, wx1: bx1, wy1: by1, ww, wh };
+  drawHeatmapLayer();
 }
 
 // ---- Helpers ----
@@ -263,8 +255,3 @@ function segInt(ax, ay, bx, by, cx, cy, dx, dy){
   return t > 0 && t < 1 && u > 0 && u < 1;
 }
 
-function chOverlap(a, b, freq){
-  if(a === 0 || b === 0) return false;
-  if(freq === '5') return a === b;
-  return Math.abs(a - b) < 5;
-}

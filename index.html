@@ -8,6 +8,11 @@
 </head>
 <body>
 
+<!-- Header -->
+<div id="app-header">
+  <span id="app-title">Análise de rede — Consórcio Intermunicipal do Médio Alto Uruguai (CIMAU)</span>
+</div>
+
 <!-- Floor tabs -->
 <div id="floor-bar">
   <span id="floor-bar-label">🏢 Andar</span>
@@ -25,11 +30,11 @@
     <span class="tg-label">📶 Sinal:</span>
     <button class="tbtn" id="hm-sim-btn" onclick="setHeatmapMode('simulation')">📶 Simulado</button>
     <button class="tbtn" id="hm-real-btn" onclick="setHeatmapMode('real')">🎯 Real</button>
-    <button class="tbtn" id="hm-int-btn" onclick="setHeatmapMode('interference')">⚡ Interferência</button>
     <button class="tbtn" onclick="setHeatmapMode('off')">✕ Off</button>
     <button class="tbtn" id="btn-measure" onclick="setTool('measure')" title="Clique em qualquer ponto para medir o dBm simulado">📍 Medir</button>
     <button class="tbtn" id="btn-mpoint" onclick="setTool('mpoint')" title="Adicionar ponto de medição real (você digita o dBm)">📌 Ponto Real</button>
     <button class="tbtn" id="btn-dist" onclick="setTool('dist')" title="Clique em dois pontos para medir a distância entre eles">📏 Distância</button>
+    <button class="tbtn" id="btn-rooms" onclick="toggleRoomLabels()" title="Mostrar/ocultar nome dos cômodos">🏷 Cômodos</button>
     <div id="formula-wrap" style="display:none">
       <span class="formula-tag">
         <span id="formula-math"></span>
@@ -47,6 +52,7 @@
     <canvas id="wall-canvas" style="pointer-events:none"></canvas>
     <canvas id="device-canvas" style="pointer-events:none"></canvas>
     <canvas id="mpoint-canvas" style="pointer-events:none"></canvas>
+    <canvas id="label-canvas" style="pointer-events:none"></canvas>
     <canvas id="interact-canvas"></canvas>
     <div id="hud">🖱 posição: —</div>
     <div id="zoom-info">Zoom: 100% | Grid: 20cm</div>
@@ -56,37 +62,36 @@
     <div id="sidebar-toggle" onclick="toggleSidebar()" title="Expandir painel">▶</div>
     <div id="sidebar" class="collapsed">
 
-    <div class="sec">
-      <h4>Ponto selecionado</h4>
-      <div id="no-sel" class="hint">Selecione um ponto de medição.</div>
-      <div id="mpoint-props" style="display:none">
-        <div class="pr"><label>dBm medido</label><input type="number" id="mp-dbm" min="-100" max="0" value="-65" oninput="upMpointProp('dbm',+this.value)"></div>
-        <div class="pr"><label>SSID/AP</label><input type="text" id="mp-label" placeholder="nome da rede" oninput="upMpointProp('label',this.value)"></div>
-        <div class="hint" style="margin-top:4px">Este ponto âncora o mapa de cobertura real neste local com o valor medido in-loco.</div>
-        <button class="tbtn danger" style="width:100%;margin-top:8px;justify-content:center" onclick="deleteMpoint()">🗑 Remover ponto</button>
-      </div>
-    </div>
-
-    <div class="sec">
-      <h4>Cobertura Real</h4>
-      <div class="hint" style="margin-bottom:8px">Use <b>📌 Ponto Real</b> para marcar locais medidos com celular/app. O mapa <b>🎯 Real</b> interpola entre os pontos.</div>
+<div class="sec">
+      <h4>Pontos medidos</h4>
+      <div class="hint" style="margin-bottom:8px">Cada ponto âncora o mapa <b>🎯 Real</b> com o valor medido in-loco. Use <b>📌 Ponto Real</b> para adicionar novos.</div>
       <div id="mpoints-list" class="hint">Nenhum ponto adicionado.</div>
     </div>
 
     <div class="sec">
-      <h4>Legenda Sinal</h4>
+      <h4>Legenda — Sinal Wi-Fi</h4>
       <div class="sig-row"><div class="sig-dot" style="background:#10b981"></div>Excelente (&gt;−55 dBm)</div>
-      <div class="sig-row"><div class="sig-dot" style="background:#84cc16"></div>Muito bom (−55/−65)</div>
-      <div class="sig-row"><div class="sig-dot" style="background:#f59e0b"></div>Bom (−65/−72)</div>
-      <div class="sig-row"><div class="sig-dot" style="background:#f97316"></div>Fraco (−72/−80)</div>
-      <div class="sig-row"><div class="sig-dot" style="background:#ef4444"></div>Muito fraco (−80/−90)</div>
-      <div class="sig-row"><div class="sig-dot" style="background:#1e2535;border:1px solid #2a3347"></div>Sem sinal</div>
-      <div style="margin-top:8px" class="hint"><b>Interferência:</b> verde=canal livre, amarelo/vermelho=canais sobrepostos</div>
+      <div class="sig-row"><div class="sig-dot" style="background:#84cc16"></div>Muito bom (−55 / −65 dBm)</div>
+      <div class="sig-row"><div class="sig-dot" style="background:#f59e0b"></div>Bom (−65 / −72 dBm)</div>
+      <div class="sig-row"><div class="sig-dot" style="background:#f97316"></div>Fraco (−72 / −80 dBm)</div>
+      <div class="sig-row"><div class="sig-dot" style="background:#ef4444"></div>Muito fraco (−80 / −90 dBm)</div>
+      <div class="sig-row"><div class="sig-dot" style="background:#1e2535;border:1px solid #2a3347"></div>Sem cobertura</div>
     </div>
 
     <div class="sec">
       <h4>Controles</h4>
-      <div class="hint">Scroll → zoom<br>Botão direito → mover canvas<br>Del → remover ponto selecionado</div>
+      <div class="hint">
+        <b>Navegação</b><br>
+        Scroll → zoom in/out<br>
+        Arrastar (dir.) → mover mapa<br>
+        <br>
+        <b>Ferramentas</b><br>
+        📍 Medir → clique p/ ver dBm no ponto<br>
+        📌 Ponto Real → adicionar medição<br>
+        📏 Distância → dois cliques p/ medir<br>
+        Esc → cancelar medição de distância<br>
+        Del → remover ponto selecionado
+      </div>
     </div>
     </div>
   </div>
