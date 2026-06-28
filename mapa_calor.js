@@ -84,6 +84,18 @@ function freqRouters(f){
   return f.devices.filter(d=>d.type==='router'&&(!d.freq||d.freq==='dual'||d.freq===selectedFreq));
 }
 
+// Bounding box das paredes + margem em metros → [x1,y1,x2,y2] em coords mundo
+function computeBounds(f, marginM){
+  let x1=Infinity, y1=Infinity, x2=-Infinity, y2=-Infinity;
+  f.walls.forEach(w=>{
+    x1=Math.min(x1,w.x1,w.x2); y1=Math.min(y1,w.y1,w.y2);
+    x2=Math.max(x2,w.x1,w.x2); y2=Math.max(y2,w.y1,w.y2);
+  });
+  if(x1===Infinity) return null;
+  const m = marginM * 100 / gridCm * GRID;
+  return [x1-m, y1-m, x2+m, y2+m];
+}
+
 // ---- Cálculo principal ----
 function calcHeatmap(){
   const c = ctxHm;
@@ -95,7 +107,10 @@ function calcHeatmap(){
   if(heatmapMode === 'real'){ drawRealHeatmap(c, f); return; }
   if(!routers.length){ c.clearRect(0, 0, W, H); return; }
 
+  const b = computeBounds(f, 10);
+
   renderHeatmap(c, (wx, wy) => {
+    if(b && (wx<b[0]||wx>b[2]||wy<b[1]||wy>b[3])) return [0,0,0,0];
     let maxSig = -999, dominantR = null;
     routers.forEach(r => {
       const sig = computeSig(r, wx, wy, f.walls, f.openings);
@@ -129,10 +144,12 @@ function computeSig(r, wx, wy, walls, openings){
   const n     = band === '5' ? 3.5 : 3.0;
   const fMHz  = band === '5' ? 5500 : 2412;
   const pl    = 20 * Math.log10(fMHz) - 27.55 + 10 * n * Math.log10(distM);
+  // 5 GHz absorvido ~1,5× mais por paredes (ITU-R P.2040, IEEE 802.11ax study)
+  const wallFactor = band === '5' ? 1.5 : 1.0;
   let sig     = (r.power || 17) + (r.gain || 2) - pl;
   walls.forEach(w => {
     if(segInt(r.x, r.y, wx, wy, w.x1, w.y1, w.x2, w.y2))
-      sig -= (wallTypeDefs[w.type] || wallTypeDefs.custom).db;
+      sig -= (wallTypeDefs[w.type] || wallTypeDefs.custom).db * wallFactor;
   });
   openings.forEach(o => {
     if(segInt(r.x, r.y, wx, wy, o.x1, o.y1, o.x2, o.y2))
@@ -161,8 +178,10 @@ function drawRealHeatmap(c, f){
   });
 
   const idwPow = 2;
+  const b = computeBounds(f, 10);
 
   renderHeatmap(c, (wx, wy) => {
+    if(b && (wx<b[0]||wx>b[2]||wy<b[1]||wy>b[3])) return [0,0,0,0];
     let simSig = -999;
     if(routers.length)
       routers.forEach(r => {
