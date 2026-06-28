@@ -307,6 +307,15 @@ function drawDistPreview(){
   ctxInt.restore();
 }
 
+function measureStatusMsg(){
+  const labels = {
+    simulation:   'dBm simulado',
+    real:         'dBm real (calibrado)',
+    interference: 'interferência de canal',
+  };
+  return '📍 Medir: clique em qualquer ponto para ver o ' + (labels[heatmapMode] || 'dBm simulado');
+}
+
 function setFreq(f){
   selectedFreq=f;
   document.getElementById('freq-24-btn').classList.toggle('active',f==='2.4');
@@ -331,7 +340,7 @@ function setTool(t){
   intC.style.cursor=cursors[t]||'default';
 
   const msgs={
-    measure:'📍 Medir: clique em qualquer ponto para ver o dBm simulado',
+    measure: measureStatusMsg(),
     mpoint:'📌 Ponto Real: clique no local e informe o dBm medido in-loco',
     dist:'📏 Medir distância: clique no ponto inicial, depois no ponto final',
   };

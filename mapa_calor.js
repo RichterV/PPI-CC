@@ -45,6 +45,9 @@ function setHeatmapMode(mode){
     wrap.style.display = 'none';
   }
 
+  if(tool === 'measure')
+    document.getElementById('status').textContent = measureStatusMsg();
+
   calcHeatmap();
 }
 
@@ -118,17 +121,36 @@ function calcHeatmap(){
     });
 
     if(heatmapMode === 'interference'){
-      let intCount = 0;
+      if(maxSig < -90) return [0, 0, 0, 0];
+
+      // SIR = S_dominante / Σ(S_interferente × fator_sobreposição)
+      const domLin = Math.pow(10, maxSig / 10);
+      let intLin = 0;
+
       routers.forEach(r => {
         if(r === dominantR) return;
         const s = computeSig(r, wx, wy, f.walls, f.openings);
-        if(s >= -80 && dominantR && chOverlap(r.channel||0, dominantR.channel||0, r.freq||'2.4'))
-          intCount++;
+        if(s < -95) return; // sinal negligível
+        if(!chOverlap(r.channel||0, dominantR.channel||0, selectedFreq)) return;
+
+        // Sobreposição parcial: canais 2,4 GHz vizinhos interferem menos
+        // Em 5 GHz os canais não se sobrepõem (orthogonal), overlap=1 apenas quando iguais
+        const diff = selectedFreq !== '5'
+          ? Math.abs((r.channel||0) - (dominantR.channel||0))
+          : 0;
+        const overlapFactor = selectedFreq !== '5' ? Math.max(0, 1 - diff / 5) : 1.0;
+
+        intLin += Math.pow(10, s / 10) * overlapFactor;
       });
-      if(maxSig < -90)       return [15,  17,  23,  30];
-      if(intCount === 0)     return [16,  185, 129, 190];
-      if(intCount === 1)     return [245, 158, 11,  200];
-      return                        [239, 68,  68,  210];
+
+      if(intLin === 0) return [16, 185, 129, 190]; // sem interferentes válidos → verde
+
+      // Limiares IEEE 802.11 (SIR em dB)
+      const sirDb = 10 * Math.log10(domLin / intLin);
+      if(sirDb >= 20) return [16,  185, 129, 190]; // ótimo  — sem impacto
+      if(sirDb >= 10) return [245, 158, 11,  200]; // moderado — throughput reduzido
+      if(sirDb >=  5) return [249, 115, 22,  200]; // severo  — apenas MCS baixos
+      return                 [239, 68,  68,  210]; // crítico — degradação máxima
     }
 
     return sigToRGBA(maxSig);
