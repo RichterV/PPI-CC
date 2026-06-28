@@ -17,6 +17,11 @@
 <!-- Toolbar -->
 <div id="toolbar">
   <div class="tg">
+    <span class="tg-label">📻 Banda:</span>
+    <button class="tbtn active" id="freq-24-btn" onclick="setFreq('2.4')">2.4 GHz</button>
+    <button class="tbtn" id="freq-5-btn" onclick="setFreq('5')">5 GHz</button>
+  </div>
+  <div class="tg">
     <span class="tg-label">📶 Sinal:</span>
     <button class="tbtn" id="hm-sim-btn" onclick="setHeatmapMode('simulation')">📶 Simulado</button>
     <button class="tbtn" id="hm-real-btn" onclick="setHeatmapMode('real')">🎯 Real</button>
@@ -24,6 +29,13 @@
     <button class="tbtn" onclick="setHeatmapMode('off')">✕ Off</button>
     <button class="tbtn" id="btn-measure" onclick="setTool('measure')" title="Clique em qualquer ponto para medir o dBm simulado">📍 Medir</button>
     <button class="tbtn" id="btn-mpoint" onclick="setTool('mpoint')" title="Adicionar ponto de medição real (você digita o dBm)">📌 Ponto Real</button>
+    <button class="tbtn" id="btn-dist" onclick="setTool('dist')" title="Clique em dois pontos para medir a distância entre eles">📏 Distância</button>
+    <div id="formula-wrap" style="display:none">
+      <span class="formula-tag">
+        <span id="formula-math"></span>
+        <div class="formula-tooltip" id="formula-tooltip"></div>
+      </span>
+    </div>
   </div>
 </div>
 

@@ -1,6 +1,8 @@
 // ===================== CONFIG =====================
 const GRID = 24;
 let gridCm = 20;
+let selectedFreq = '2.4';
+function activeDbm(p){ return selectedFreq==='5' ? (p.dbm5??p.dbm) : p.dbm; }
 
 let wallTypeDefs = {
   drywall:   {color:'#7090b0', w:3, db:3,  label:'Drywall'},
@@ -51,6 +53,7 @@ const ctxHm    = hmC.getContext('2d');
 const ctxWall  = wallC.getContext('2d');
 const ctxDev   = devC.getContext('2d');
 const ctxMp    = mpC.getContext('2d');
+const ctxInt   = intC.getContext('2d');
 
 let W=0, H=0;
 
@@ -64,8 +67,12 @@ let panX=0, panY=0, zoom=1;
 function toWorld(sx,sy){return[(sx-panX)/zoom,(sy-panY)/zoom]}
 function toScreen(wx,wy){return[wx*zoom+panX,wy*zoom+panY]}
 function worldToCm(w){ return (w/GRID)*gridCm; }
+function worldToM(w){ return worldToCm(w)/100; }
 
-function redrawAll(){drawBg();drawBgImg();drawWalls();drawDevices();drawMpoints();calcHeatmap();}
+function redrawAll(){
+  drawBg();drawBgImg();drawWalls();drawDevices();drawMpoints();calcHeatmap();
+  drawDistPreview();
+}
 
 // ===================== BG =====================
 function drawBg(){
@@ -86,12 +93,12 @@ function drawBg(){
     c.textAlign='center'; c.textBaseline='top';
     for(let x=ox5-gs5;x<W+gs5;x+=gs5){
       const wx=(x-panX)/zoom;
-      c.fillText(Math.round(worldToCm(wx))+'cm',x,2);
+      c.fillText(worldToM(wx).toFixed(1)+'m',x,2);
     }
     c.textAlign='right'; c.textBaseline='middle';
     for(let y=oy5-gs5;y<H+gs5;y+=gs5){
       const wy=(y-panY)/zoom;
-      c.fillText(Math.round(worldToCm(wy))+'cm',W-3,y);
+      c.fillText(worldToM(wy).toFixed(1)+'m',W-3,y);
     }
   }
 }
@@ -156,39 +163,79 @@ function getImg(src,cb){
   const i=new Image();i.onload=()=>{imgCache[src]=i;cb(i)};i.onerror=()=>cb(null);i.src=src;
 }
 const fallbackIcons={router:'📡',pc:'🖥',notebook:'💻',printer:'🖨',switch:'🔀'};
+const DEV_COLORS={router:'#3b82f6',pc:'#22c55e',notebook:'#6366f1',printer:'#f59e0b',switch:'#06b6d4'};
+function devColor(d){return(d.type==='router'&&d.freq==='5')?'#8b5cf6':DEV_COLORS[d.type]||'#64748b';}
+function fillRR(c,x,y,w,h,r){
+  r=Math.min(r,w/2,h/2);
+  c.beginPath();
+  c.moveTo(x+r,y); c.lineTo(x+w-r,y); c.arcTo(x+w,y,x+w,y+r,r);
+  c.lineTo(x+w,y+h-r); c.arcTo(x+w,y+h,x+w-r,y+h,r);
+  c.lineTo(x+r,y+h); c.arcTo(x,y+h,x,y+h-r,r);
+  c.lineTo(x,y+r); c.arcTo(x,y,x+r,y,r);
+  c.closePath();
+}
 
 function drawDevices(){
   const c=ctxDev; c.clearRect(0,0,W,H);
   fl().devices.forEach(d=>{
     const[sx,sy]=toScreen(d.x,d.y);
-    const sz=26*Math.max(zoom,0.4);
+    const zf=Math.max(zoom,0.35);
+    const sz=24*zf, pad=6*zf, r=8*zf;
+    const col=devColor(d);
+    const cw=sz+pad*2, ch=sz+pad*2;
+    const cx=sx-cw/2, cy=sy-ch/2;
+
+    // anéis WiFi para roteadores
+    if(d.type==='router'){
+      c.save(); c.globalAlpha=0.1;
+      for(let i=1;i<=3;i++){
+        c.beginPath(); c.arc(sx,sy,cw/2+i*12*zf,0,Math.PI*2);
+        c.strokeStyle=col; c.lineWidth=1.5; c.stroke();
+      }
+      c.restore();
+    }
+
+    // card de fundo
+    fillRR(c,cx,cy,cw,ch,r);
+    c.fillStyle='rgba(18,24,38,0.92)'; c.fill();
+    c.strokeStyle=col; c.lineWidth=1.5; c.stroke();
+
+    // ícone
     const drawIcon=()=>{
-      c.font=`${sz*0.9}px serif`;c.textAlign='center';c.textBaseline='middle';
+      c.font=`${sz*0.88}px serif`; c.textAlign='center'; c.textBaseline='middle';
       c.fillText(d.icon||fallbackIcons[d.type]||'❓',sx,sy);
     };
     if(d.imgSrc){
       getImg(d.imgSrc,img=>{
-        if(!img){drawIcon();drawDeviceLbl(c,d,sx,sy,sz);return}
-        c.drawImage(img,sx-sz/2,sy-sz/2,sz,sz);
-        drawDeviceLbl(c,d,sx,sy,sz);
+        if(img){const is=sz*0.82; c.drawImage(img,sx-is/2,sy-is/2,is,is);}
+        else drawIcon();
+        drawDeviceLbl(c,d,sx,sy,cw,ch,col);
       });
-    } else { drawIcon(); }
-    drawDeviceLbl(c,d,sx,sy,sz);
+    } else { drawIcon(); drawDeviceLbl(c,d,sx,sy,cw,ch,col); }
+
+    // badge de canal
     if(d.type==='router'&&d.channel&&d.channel!==0){
-      const bx=sx+sz/2+2,by=sy-sz/2-2;
-      c.fillStyle=d.freq==='5'?'#8b5cf6':'#10b981';
-      c.fillRect(bx,by,28,13);
-      c.fillStyle='#fff';c.font=`bold ${9*Math.max(zoom,0.4)}px var(--font)`;
-      c.textAlign='center';c.textBaseline='middle';c.fillText('ch'+d.channel,bx+14,by+6.5);
+      const bw=30*zf, bh=14*zf;
+      const bx=cx+cw-4, by=cy-4;
+      fillRR(c,bx,by,bw,bh,bh/2);
+      c.fillStyle=d.freq==='5'?'#8b5cf6':'#10b981'; c.fill();
+      c.fillStyle='#fff'; c.font=`bold ${9*zf}px var(--font)`;
+      c.textAlign='center'; c.textBaseline='middle'; c.fillText('ch'+d.channel,bx+bw/2,by+bh/2);
     }
   });
 }
-function drawDeviceLbl(c,d,sx,sy,sz){
+function drawDeviceLbl(c,d,sx,sy,cw,ch,col){
+  const zf=Math.max(zoom,0.4);
   const lbl=d.name||d.typeLabel||d.type;
-  c.font=`bold ${10*Math.max(zoom,0.4)}px var(--font)`;c.textAlign='center';
+  c.font=`600 ${10*zf}px var(--font)`; c.textAlign='center';
   const tw=c.measureText(lbl).width;
-  c.fillStyle='rgba(15,17,23,.85)';c.fillRect(sx-tw/2-3,sy+sz/2+2,tw+6,13*Math.max(zoom,0.4));
-  c.fillStyle='#e2e8f0';c.textBaseline='top';c.fillText(lbl,sx,sy+sz/2+3);
+  const ph=15*zf, pw=tw+14*zf;
+  const px=sx-pw/2, py=sy+ch/2+3*zf;
+  fillRR(c,px,py,pw,ph,ph/2);
+  c.fillStyle='rgba(15,17,23,.92)'; c.fill();
+  c.strokeStyle=col; c.lineWidth=0.8; c.stroke();
+  c.fillStyle='#cbd5e1'; c.textBaseline='middle';
+  c.fillText(lbl,sx,py+ph/2);
 }
 
 // ===================== DRAW MPOINTS =====================
@@ -197,7 +244,8 @@ function drawMpoints(){
   fl().mpoints.forEach((p,i)=>{
     const[sx,sy]=toScreen(p.x,p.y);
     const sel=i===selectedIdx&&selectedType==='mpoint';
-    const col=dbmToColor(p.dbm);
+    const dbm=activeDbm(p);
+    const col=dbmToColor(dbm);
     c.save();
     c.shadowColor=col;c.shadowBlur=sel?14:6;
     c.beginPath();c.arc(sx,sy,sel?8:6,0,Math.PI*2);
@@ -206,7 +254,7 @@ function drawMpoints(){
     c.restore();
     c.fillStyle='#fff';c.font=`bold ${10*Math.max(zoom,0.5)}px var(--font)`;
     c.textAlign='center';c.textBaseline='bottom';
-    c.fillText(p.dbm+'dBm',sx,sy-8);
+    c.fillText(dbm+'dBm',sx,sy-8);
     if(p.label){
       c.fillStyle='#94a3b8';c.font=`${9*Math.max(zoom,0.5)}px var(--font)`;
       c.fillText(p.label,sx,sy-18);
@@ -219,14 +267,73 @@ let tool='measure';
 let selectedIdx=-1, selectedType=null;
 let panning=false, panSX=0, panSY=0, panOX=0, panOY=0;
 
+// ---- Ferramenta de medição de distância ----
+let mdist = null;             // {x1,y1} em coords mundo quando P1 foi definido
+let lastMouseW = {wx:0,wy:0}; // última posição do mouse em coords mundo
+
+function drawDistPreview(){
+  ctxInt.clearRect(0,0,W,H);
+  if(tool!=='dist' || !mdist) return;
+
+  const[sx1,sy1] = toScreen(mdist.x1, mdist.y1);
+  const[sx2,sy2] = toScreen(lastMouseW.wx, lastMouseW.wy);
+  const dx = lastMouseW.wx - mdist.x1, dy = lastMouseW.wy - mdist.y1;
+  const distM = Math.sqrt(dx*dx+dy*dy) / GRID * (gridCm/100);
+
+  ctxInt.save();
+  // linha tracejada
+  ctxInt.strokeStyle='#3b82f6'; ctxInt.lineWidth=1.5; ctxInt.lineCap='round';
+  ctxInt.setLineDash([7,4]);
+  ctxInt.beginPath(); ctxInt.moveTo(sx1,sy1); ctxInt.lineTo(sx2,sy2); ctxInt.stroke();
+  ctxInt.setLineDash([]);
+  // pontos terminais
+  for(const[x,y] of [[sx1,sy1],[sx2,sy2]]){
+    ctxInt.beginPath(); ctxInt.arc(x,y,4,0,Math.PI*2);
+    ctxInt.fillStyle='#3b82f6'; ctxInt.fill();
+    ctxInt.strokeStyle='#fff'; ctxInt.lineWidth=1; ctxInt.stroke();
+  }
+  // rótulo de distância no ponto médio
+  const mx=(sx1+sx2)/2, my=(sy1+sy2)/2;
+  const label = distM.toFixed(2)+' m';
+  ctxInt.font='bold 12px var(--font)';
+  const tw = ctxInt.measureText(label).width;
+  ctxInt.fillStyle='rgba(15,17,23,.9)';
+  ctxInt.fillRect(mx-tw/2-8, my-11, tw+16, 22);
+  ctxInt.strokeStyle='#3b82f6'; ctxInt.lineWidth=1;
+  ctxInt.strokeRect(mx-tw/2-8, my-11, tw+16, 22);
+  ctxInt.fillStyle='#93c5fd';
+  ctxInt.textAlign='center'; ctxInt.textBaseline='middle';
+  ctxInt.fillText(label, mx, my);
+  ctxInt.restore();
+}
+
+function setFreq(f){
+  selectedFreq=f;
+  document.getElementById('freq-24-btn').classList.toggle('active',f==='2.4');
+  document.getElementById('freq-5-btn').classList.toggle('active',f==='5');
+  if(selectedType==='mpoint'&&selectedIdx>=0) selectEl('mpoint',selectedIdx);
+  redrawAll();
+  updateMpointsList();
+}
+
+function cancelDist(){
+  mdist = null;
+  ctxInt.clearRect(0,0,W,H);
+}
+
 function setTool(t){
+  if(tool==='dist') cancelDist();
   tool=t;
   document.querySelectorAll('.tbtn[id^=btn-]').forEach(b=>b.classList.remove('active'));
   const el=document.getElementById('btn-'+t);if(el)el.classList.add('active');
-  intC.style.cursor=t==='measure'?'cell':'crosshair';
+
+  const cursors={measure:'cell', mpoint:'crosshair', dist:'crosshair'};
+  intC.style.cursor=cursors[t]||'default';
+
   const msgs={
     measure:'📍 Medir: clique em qualquer ponto para ver o dBm simulado',
     mpoint:'📌 Ponto Real: clique no local e informe o dBm medido in-loco',
+    dist:'📏 Medir distância: clique no ponto inicial, depois no ponto final',
   };
   document.getElementById('status').textContent=msgs[t]||'';
 }
@@ -239,7 +346,7 @@ function selectEl(type,idx){
   if(type==='mpoint'){
     const p=fl().mpoints[idx];
     document.getElementById('mpoint-props').style.display='block';
-    document.getElementById('mp-dbm').value=p.dbm;
+    document.getElementById('mp-dbm').value=activeDbm(p);
     document.getElementById('mp-label').value=p.label||'';
   } else {
     document.getElementById('no-sel').style.display='block';
@@ -249,7 +356,8 @@ function selectEl(type,idx){
 
 function upMpointProp(prop,val){
   if(selectedType==='mpoint'&&selectedIdx>=0){
-    fl().mpoints[selectedIdx][prop]=val;
+    const actualProp=(prop==='dbm')?(selectedFreq==='5'?'dbm5':'dbm'):prop;
+    fl().mpoints[selectedIdx][actualProp]=val;
     drawMpoints();if(heatmapMode==='real')calcHeatmap();
     updateMpointsList();
   }
@@ -268,9 +376,9 @@ function updateMpointsList(){
   if(!f.mpoints.length){el.textContent='Nenhum ponto adicionado.';return}
   el.innerHTML=f.mpoints.map((p,i)=>`
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;cursor:pointer" onclick="selectMpoint(${i})">
-      <div style="width:10px;height:10px;border-radius:50%;background:${dbmToColor(p.dbm)};flex-shrink:0"></div>
+      <div style="width:10px;height:10px;border-radius:50%;background:${dbmToColor(activeDbm(p))};flex-shrink:0"></div>
       <span style="font-size:11px;color:var(--text)">${p.label||'Ponto '+(i+1)}</span>
-      <span style="font-size:11px;color:var(--text3);margin-left:auto">${p.dbm} dBm</span>
+      <span style="font-size:11px;color:var(--text3);margin-left:auto">${activeDbm(p)} dBm</span>
     </div>`).join('');
 }
 function selectMpoint(i){selectEl('mpoint',i);drawMpoints();}
@@ -293,18 +401,34 @@ intC.addEventListener('mousedown',e=>{
   if(e.button===2){panning=true;panSX=sx;panSY=sy;panOX=panX;panOY=panY;intC.style.cursor='grabbing';return}
 
   const f=fl();
+
+  // ---- ferramenta de distância ----
+  if(tool==='dist'){
+    if(!mdist){
+      mdist={x1:wx,y1:wy};
+      document.getElementById('status').textContent='📏 Clique no ponto final para medir';
+    } else {
+      const dx=wx-mdist.x1, dy=wy-mdist.y1;
+      const distM=Math.sqrt(dx*dx+dy*dy)/GRID*(gridCm/100);
+      showDistPopup(sx,sy,distM,mdist.x1,mdist.y1,wx,wy);
+      cancelDist();
+    }
+    return;
+  }
+
+  // ---- ferramenta de dBm pontual ----
   if(tool==='measure'){
-    const routers=f.devices.filter(d=>d.type==='router');
+    const routers=f.devices.filter(d=>d.type==='router'&&(!d.freq||d.freq==='dual'||d.freq===selectedFreq));
     let simSig=-999;
     routers.forEach(r=>{const s=computeSig(r,wx,wy,f.walls,f.openings);if(s>simSig)simSig=s});
     let calibrated=null;
     if(f.mpoints.length&&routers.length){
-      const corrs=f.mpoints.map(p=>{let ms=-999;routers.forEach(r=>{const s=computeSig(r,p.x,p.y,f.walls,f.openings);if(s>ms)ms=s});return{x:p.x,y:p.y,delta:p.dbm-ms}});
+      const corrs=f.mpoints.map(p=>{let ms=-999;routers.forEach(r=>{const s=computeSig(r,p.x,p.y,f.walls,f.openings);if(s>ms)ms=s});return{x:p.x,y:p.y,delta:activeDbm(p)-ms}});
       let wsum=0,vsum=0;
       corrs.forEach(corr=>{const dist=Math.sqrt((wx-corr.x)**2+(wy-corr.y)**2)||0.001;let pen=0;f.walls.forEach(w=>{if(segInt(corr.x,corr.y,wx,wy,w.x1,w.y1,w.x2,w.y2))pen+=(wallTypeDefs[w.type]||wallTypeDefs.custom).db});const eDist=dist*Math.pow(10,pen/20);const wt=1/Math.pow(eDist,2);wsum+=wt;vsum+=wt*corr.delta});
       calibrated=simSig+(wsum>0?vsum/wsum:0);
     }
-    showMeasurePopup(sx,sy,simSig,calibrated,Math.round(worldToCm(wx)),Math.round(worldToCm(wy)));
+    showMeasurePopup(sx,sy,simSig,calibrated,worldToM(wx),worldToM(wy));
     return;
   }
 
@@ -318,12 +442,14 @@ intC.addEventListener('mousedown',e=>{
 intC.addEventListener('mousemove',e=>{
   const[sx,sy]=[e.offsetX,e.offsetY];
   const[wx,wy]=toWorld(sx,sy);
-  document.getElementById('hud').textContent=`📍 ${Math.round(worldToCm(wx))}cm, ${Math.round(worldToCm(wy))}cm`;
-  if(panning){panX=panOX+(sx-panSX);panY=panOY+(sy-panSY);redrawAll();}
+  lastMouseW={wx,wy};
+  document.getElementById('hud').textContent=`📍 ${worldToM(wx).toFixed(2)} m, ${worldToM(wy).toFixed(2)} m`;
+  if(panning){panX=panOX+(sx-panSX);panY=panOY+(sy-panSY);redrawAll();return;}
+  if(tool==='dist') drawDistPreview();
 });
 
 intC.addEventListener('mouseup',()=>{
-  if(panning){panning=false;intC.style.cursor=tool==='measure'?'cell':'crosshair';}
+  if(panning){panning=false;intC.style.cursor=tool==='dist'||tool==='mpoint'?'crosshair':tool==='measure'?'cell':'default';}
 });
 
 intC.addEventListener('wheel',e=>{
@@ -332,11 +458,14 @@ intC.addEventListener('wheel',e=>{
   const[mx,my]=[e.offsetX,e.offsetY];
   panX=mx-(mx-panX)*f;panY=my-(my-panY)*f;
   zoom=Math.min(Math.max(zoom*f,0.1),10);
-  redrawAll();document.getElementById('zoom-info').textContent=`Zoom: ${Math.round(zoom*100)}% | Grid: ${gridCm}cm`;
+  redrawAll();document.getElementById('zoom-info').textContent=`Zoom: ${Math.round(zoom*100)}% | Grid: ${(gridCm/100).toFixed(2)} m`;
 },{passive:false});
 
 document.addEventListener('keydown',e=>{
   if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return;
+  if(e.key==='Escape'){
+    if(tool==='dist'&&mdist){ cancelDist(); document.getElementById('status').textContent='📏 Medir distância: clique no ponto inicial, depois no ponto final'; return; }
+  }
   if((e.key==='Delete'||e.key==='Backspace')&&selectedType==='mpoint'&&selectedIdx>=0){
     fl().mpoints.splice(selectedIdx,1);
     drawMpoints();updateMpointsList();if(heatmapMode==='real')calcHeatmap();
@@ -344,9 +473,9 @@ document.addEventListener('keydown',e=>{
   }
 });
 
-// ===================== MEASURE POPUP =====================
+// ===================== MEASURE POPUP (dBm) =====================
 let measurePopup=null;
-function showMeasurePopup(sx,sy,simDbm,calibDbm,cmx,cmy){
+function showMeasurePopup(sx,sy,simDbm,calibDbm,mx,my){
   if(measurePopup)measurePopup.remove();
   const displayDbm=calibDbm!==null?calibDbm:simDbm;
   const col=dbmToColor(displayDbm);
@@ -362,9 +491,26 @@ function showMeasurePopup(sx,sy,simDbm,calibDbm,cmx,cmy){
         <div style="color:#64748b;font-size:10px">Δ ${(calibDbm-simDbm)>0?'+':''}${(calibDbm-simDbm).toFixed(1)} dB correção</div>`
       :`<div style="color:#94a3b8;font-size:11px">📶 Simulado (sem pontos reais)</div>`
     }
-    <div style="color:#475569;font-size:10px;margin-top:4px">📍 ${cmx}cm, ${cmy}cm</div>`;
+    <div style="color:#475569;font-size:10px;margin-top:4px">📍 ${mx.toFixed(2)} m, ${my.toFixed(2)} m</div>`;
   wrap.appendChild(div);measurePopup=div;
   setTimeout(()=>{div.remove();if(measurePopup===div)measurePopup=null},4000);
+}
+
+// ===================== DIST POPUP =====================
+let distPopup=null;
+function showDistPopup(sx,sy,distM,wx1,wy1,wx2,wy2){
+  if(distPopup)distPopup.remove();
+  const div=document.createElement('div');
+  div.style.cssText=`position:absolute;left:${sx+14}px;top:${sy-12}px;background:rgba(15,17,23,.96);border:1px solid #3b82f6;border-radius:8px;padding:9px 13px;font-size:12px;color:#e2e8f0;z-index:20;pointer-events:none;min-width:140px`;
+  const dx=wx2-wx1, dy=wy2-wy1;
+  const horizM=Math.abs(worldToM(dx)), vertM=Math.abs(worldToM(dy));
+  div.innerHTML=`
+    <div style="color:#60a5fa;font-weight:700;font-size:16px;margin-bottom:4px">📏 ${distM.toFixed(2)} m</div>
+    <div style="color:#64748b;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Distância medida</div>
+    <div style="color:#94a3b8;font-size:11px">↔ Horizontal: ${horizM.toFixed(2)} m</div>
+    <div style="color:#94a3b8;font-size:11px">↕ Vertical: ${vertM.toFixed(2)} m</div>`;
+  wrap.appendChild(div);distPopup=div;
+  setTimeout(()=>{div.remove();if(distPopup===div)distPopup=null},5000);
 }
 
 // ===================== MPOINT MODAL =====================
@@ -420,7 +566,7 @@ function fitToView(){
   zoom = Math.min(Math.max(Math.min((W-pad*2)/cw,(H-pad*2)/ch),0.1),10);
   panX = W/2-(minX+cw/2)*zoom;
   panY = H/2-(minY+ch/2)*zoom;
-  document.getElementById('zoom-info').textContent=`Zoom: ${Math.round(zoom*100)}% | Grid: ${gridCm}cm`;
+  document.getElementById('zoom-info').textContent=`Zoom: ${Math.round(zoom*100)}% | Grid: ${(gridCm/100).toFixed(2)} m`;
 }
 
 // ===================== INIT =====================
