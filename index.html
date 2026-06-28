@@ -3,71 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <title>Planta de Rede v3</title>
+<link rel="icon" href="icons/fav-icon.png" type="image/png">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <!-- Floor tabs -->
 <div id="floor-bar">
-  <span class="tg-label" style="margin-right:4px">ANDARES:</span>
+  <span id="floor-bar-label">🏢 Andar</span>
   <div id="floor-tabs"></div>
-  <button id="add-floor-btn" onclick="addFloor()">+ Andar</button>
 </div>
 
 <!-- Toolbar -->
 <div id="toolbar">
   <div class="tg">
-    <span class="tg-label">Desenhar:</span>
-    <button class="tbtn active" id="btn-wall" onclick="setTool('wall')">▬ Parede</button>
-    <button class="tbtn" id="btn-door" onclick="setTool('door')">🚪 Porta</button>
-    <button class="tbtn" id="btn-window" onclick="setTool('window')">🪟 Janela</button>
-    <button class="tbtn" id="btn-select" onclick="setTool('select')">↖ Selecionar</button>
-    <button class="tbtn" id="btn-erase" onclick="setTool('erase')">✕ Apagar</button>
-  </div>
-  <div class="tg">
-    <span class="tg-label">Parede:</span>
-    <select class="tbtn" id="wall-type-sel" onchange="wallType=this.value">
-      <option value="alvenaria">Alvenaria</option>
-      <option value="concreto">Concreto</option>
-      <option value="drywall">Drywall</option>
-      <option value="vidro">Vidro</option>
-      <option value="custom">Personalizada</option>
-    </select>
-    <button class="tbtn" onclick="openCustomWallModal()" title="Editar parede personalizada">✏</button>
-  </div>
-  <div class="tg">
-    <span class="tg-label">Dispositivos:</span>
-    <button class="tbtn" onclick="openAddDeviceModal('router')">📡 Roteador/AP</button>
-    <button class="tbtn" onclick="openAddDeviceModal('other')">➕ Dispositivo</button>
-  </div>
-  <div class="tg">
-    <span class="tg-label">Sinal:</span>
+    <span class="tg-label">📶 Sinal:</span>
     <button class="tbtn" id="hm-sim-btn" onclick="setHeatmapMode('simulation')">📶 Simulado</button>
     <button class="tbtn" id="hm-real-btn" onclick="setHeatmapMode('real')">🎯 Real</button>
     <button class="tbtn" id="hm-int-btn" onclick="setHeatmapMode('interference')">⚡ Interferência</button>
     <button class="tbtn" onclick="setHeatmapMode('off')">✕ Off</button>
     <button class="tbtn" id="btn-measure" onclick="setTool('measure')" title="Clique em qualquer ponto para medir o dBm simulado">📍 Medir</button>
     <button class="tbtn" id="btn-mpoint" onclick="setTool('mpoint')" title="Adicionar ponto de medição real (você digita o dBm)">📌 Ponto Real</button>
-  </div>
-  <div class="tg">
-    <span class="tg-label">Fundo:</span>
-    <button class="tbtn" onclick="document.getElementById('bg-img-file').click()">🖼 Imagem/PDF</button>
-    <input type="file" id="bg-img-file" accept="image/*,application/pdf" style="display:none" onchange="loadBgFile(event)">
-    <button class="tbtn" id="btn-bgadj" onclick="setTool('bgadj')" title="Mover, escalar e rotacionar a planta de fundo">✋ Ajustar fundo</button>
-    <button class="tbtn" onclick="clearBgImage()">✕ Fundo</button>
-    <select class="tbtn" id="grid-scale-sel" onchange="setGridScale(this.value)" title="Escala do grid">
-      <option value="10">Grid 10cm</option>
-      <option value="20" selected>Grid 20cm</option>
-      <option value="50">Grid 50cm</option>
-      <option value="100">Grid 1m</option>
-    </select>
-  </div>
-  <div class="tg">
-    <button class="tbtn success" onclick="exportProject()">💾 Salvar</button>
-
-    <button class="tbtn" onclick="exportImg()">⬇ PNG</button>
-    <button class="tbtn" onclick="resetView()">⊞ Reset</button>
-    <button class="tbtn danger" onclick="clearAll()">🗑 Limpar</button>
   </div>
 </div>
 
@@ -79,7 +35,6 @@
     <canvas id="wall-canvas" style="pointer-events:none"></canvas>
     <canvas id="device-canvas" style="pointer-events:none"></canvas>
     <canvas id="mpoint-canvas" style="pointer-events:none"></canvas>
-    <canvas id="ui-canvas" style="pointer-events:none"></canvas>
     <canvas id="interact-canvas"></canvas>
     <div id="hud">🖱 posição: —</div>
     <div id="zoom-info">Zoom: 100% | Grid: 20cm</div>
@@ -90,76 +45,8 @@
     <div id="sidebar" class="collapsed">
 
     <div class="sec">
-      <h4>Propriedades</h4>
-      <div id="no-sel" class="hint">Selecione um elemento.</div>
-
-      <div id="router-props" style="display:none">
-        <div class="pr"><label>Nome</label><input type="text" id="r-name" oninput="upProp('name',this.value)"></div>
-        <div class="pr"><label>Modelo</label>
-          <select id="r-model" onchange="applyPreset(this.value)">
-            <option value="custom">Personalizado</option>
-            <option value="unifi_ac_lite">Unifi AC Lite</option>
-            <option value="unifi_ac_pro">Unifi AC Pro</option>
-            <option value="unifi_u6">Unifi U6 LR</option>
-            <option value="tplink_dir815">TP-Link DIR-815</option>
-            <option value="tplink_archer">TP-Link Archer C6</option>
-            <option value="intelbras_ap">Intelbras AP 300</option>
-            <option value="cisco_ap">Cisco Aironet</option>
-          </select>
-        </div>
-        <div class="pr"><label>Frequência</label>
-          <select id="r-freq" onchange="upProp('freq',this.value);refreshChannels()">
-            <option value="2.4">2.4 GHz</option>
-            <option value="5">5 GHz</option>
-            <option value="dual">Dual Band</option>
-          </select>
-        </div>
-        <div class="pr"><label>Canal</label><select id="r-channel" onchange="upProp('channel',+this.value)"><option value="0">Auto</option></select></div>
-        <div class="pr"><label>Potência TX</label>
-          <select id="r-txlevel" onchange="applyTxLevel(this.value)">
-            <option value="low">Baixa ~14dBm</option>
-            <option value="medium" selected>Média ~20dBm</option>
-            <option value="high">Alta ~23dBm</option>
-          </select>
-        </div>
-        <div class="sl-wrap">
-          <label>Potência dBm <span id="r-power-val">20</span></label>
-          <input type="range" id="r-power" min="5" max="30" value="20" oninput="document.getElementById('r-power-val').textContent=this.value;upProp('power',+this.value)">
-        </div>
-        <div class="sl-wrap">
-          <label>Ganho antena <span id="r-gain-val">2</span> dBi</label>
-          <input type="range" id="r-gain" min="0" max="12" value="2" oninput="document.getElementById('r-gain-val').textContent=this.value;upProp('gain',+this.value)">
-        </div>
-        <div class="sl-wrap">
-          <label>Sensib. RX <span id="r-sens-val">-70</span> dBm</label>
-          <input type="range" id="r-sens" min="-90" max="-50" value="-70" oninput="document.getElementById('r-sens-val').textContent=this.value;upProp('sensitivity',+this.value)">
-        </div>
-        <div class="pr"><label>Cor sinal</label><input type="color" id="r-color" value="#3b82f6" oninput="upProp('sigColor',this.value)"></div>
-        <button class="tbtn" style="width:100%;margin-top:4px;justify-content:center" onclick="openImageModal()">🖼 Trocar imagem</button>
-        <div class="hint" style="margin-top:5px">Excelente &gt;−55 | Bom −55/−70<br>Fraco −70/−80 | Sem −80↓</div>
-      </div>
-
-      <div id="device-props" style="display:none">
-        <div class="pr"><label>Nome</label><input type="text" id="d-name" oninput="upProp('name',this.value)"></div>
-        <div class="pr"><label>IP</label><input type="text" id="d-ip" placeholder="192.168.1.x" oninput="upProp('ip',this.value)"></div>
-        <div class="pr"><label>Tipo</label><input type="text" id="d-type-label" oninput="upProp('typeLabel',this.value)"></div>
-        <button class="tbtn" style="width:100%;margin-top:4px;justify-content:center" onclick="openImageModal()">🖼 Trocar imagem</button>
-      </div>
-
-      <div id="wall-props" style="display:none">
-        <div class="pr"><label>Tipo</label>
-          <select id="w-type" onchange="upProp('wtype',this.value)">
-            <option value="alvenaria">Alvenaria</option>
-            <option value="concreto">Concreto</option>
-            <option value="drywall">Drywall</option>
-            <option value="vidro">Vidro</option>
-            <option value="custom">Personalizada</option>
-          </select>
-        </div>
-        <div id="w-len" class="hint" style="margin-top:4px"></div>
-        <div class="hint" style="margin-top:6px">Arrastar ponta → redimensionar<br>Arrastar meio → mover</div>
-      </div>
-
+      <h4>Ponto selecionado</h4>
+      <div id="no-sel" class="hint">Selecione um ponto de medição.</div>
       <div id="mpoint-props" style="display:none">
         <div class="pr"><label>dBm medido</label><input type="number" id="mp-dbm" min="-100" max="0" value="-65" oninput="upMpointProp('dbm',+this.value)"></div>
         <div class="pr"><label>SSID/AP</label><input type="text" id="mp-label" placeholder="nome da rede" oninput="upMpointProp('label',this.value)"></div>
@@ -168,45 +55,10 @@
       </div>
     </div>
 
-    <div class="sec" id="bg-adj-sec" style="display:none">
-      <h4>🖼 Ajuste do Fundo</h4>
-      <div class="sl-wrap">
-        <label>Opacidade <span id="bg-opacity-val">35</span>%</label>
-        <input type="range" id="bg-opacity" min="5" max="100" value="35" oninput="bgAdjust('opacity',+this.value)">
-      </div>
-      <div class="sl-wrap">
-        <label>Escala <span id="bg-scale-val">100</span>%</label>
-        <input type="range" id="bg-scale" min="5" max="500" value="100" oninput="bgAdjust('scale',+this.value)">
-      </div>
-      <div class="sl-wrap">
-        <label>Rotação <span id="bg-rot-val">0</span>°</label>
-        <input type="range" id="bg-rot" min="-180" max="180" value="0" oninput="bgAdjust('rot',+this.value)">
-      </div>
-      <div class="pr"><label>Pos X (cm)</label><input type="number" id="bg-offx" value="0" style="width:118px" oninput="bgAdjust('offx',+this.value)"></div>
-      <div class="pr"><label>Pos Y (cm)</label><input type="number" id="bg-offy" value="0" style="width:118px" oninput="bgAdjust('offy',+this.value)"></div>
-      <div class="hint" style="margin-top:6px;background:rgba(59,130,246,.08);padding:6px;border-radius:5px;border:1px solid #2a3347">
-        <b style="color:var(--accent)">✋ Modo Ajuste ativo:</b><br>
-        • Arrastar → mover planta<br>
-        • Scroll → escalar planta<br>
-        • Shift+Scroll → rotacionar<br>
-        • Botão direito → mover canvas
-      </div>
-      <button class="tbtn" style="width:100%;margin-top:8px;justify-content:center" onclick="resetBgTransform()">↺ Resetar posição</button>
-    </div>
-
     <div class="sec">
       <h4>Cobertura Real</h4>
       <div class="hint" style="margin-bottom:8px">Use <b>📌 Ponto Real</b> para marcar locais medidos com celular/app. O mapa <b>🎯 Real</b> interpola entre os pontos.</div>
       <div id="mpoints-list" class="hint">Nenhum ponto adicionado.</div>
-    </div>
-
-    <div class="sec">
-      <h4>Paredes</h4>
-      <div class="leg-row"><div class="sw" style="background:#5080a0;height:5px"></div>Alvenaria −10dB</div>
-      <div class="leg-row"><div class="sw" style="background:#2a4a6a;height:8px"></div>Concreto −20dB</div>
-      <div class="leg-row"><div class="sw" style="background:#7090b0;height:3px"></div>Drywall −3dB</div>
-      <div class="leg-row"><div class="sw" style="background:#80d8f0;height:2px"></div>Vidro −2dB</div>
-      <div class="leg-row"><div class="sw" id="leg-custom" style="height:4px;background:#c084fc"></div><span id="leg-custom-label">Personalizada</span></div>
     </div>
 
     <div class="sec">
@@ -222,13 +74,13 @@
 
     <div class="sec">
       <h4>Controles</h4>
-      <div class="hint">Scroll → zoom<br>Botão direito → mover canvas<br>Del → apagar selecionado<br>Arrastar ponta parede → redimensionar<br>Arrastar meio parede → mover</div>
+      <div class="hint">Scroll → zoom<br>Botão direito → mover canvas<br>Del → remover ponto selecionado</div>
     </div>
     </div>
   </div>
 </div>
 
-<div id="status">Parede | Clique e arraste | Grid: 20cm/célula | Scroll=zoom | Dir=mover</div>
+<div id="status">Modo visualização | Scroll=zoom | Dir=mover</div>
 
 <div id="modal-overlay" class="modal-overlay" style="display:none" onclick="closeModalOverlay(event)">
   <div class="modal" id="modal-box" onclick="event.stopPropagation()">
@@ -236,6 +88,7 @@
   </div>
 </div>
 
+<script src="mapa_calor.js"></script>
 <script src="main.js"></script>
 </body>
 </html>
