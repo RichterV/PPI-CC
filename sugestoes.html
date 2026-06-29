@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sugestões de Melhorias — CIMAU</title>
+<link rel="icon" href="icons/fav-icon.png" type="image/png">
+<link rel="stylesheet" href="style.css">
+<style>
+  body {
+    overflow: auto;
+    height: auto;
+    min-height: 100vh;
+    flex-direction: column;
+    user-select: text;
+  }
+  #page-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 24px;
+    background: linear-gradient(90deg, var(--bg2) 0%, #1a2236 50%, var(--bg2) 100%);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  #page-header a {
+    font-size: 12px;
+    color: var(--text3);
+    text-decoration: none;
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg3);
+    transition: all .15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  #page-header a:hover { color: var(--text); background: var(--border); }
+  #page-header-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .4px;
+    color: transparent;
+    background: linear-gradient(90deg, #60a5fa, #a78bfa, #60a5fa);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: title-shine 4s linear infinite;
+  }
+  #page-header-sub {
+    font-size: 11px;
+    color: var(--text3);
+    margin-left: auto;
+    white-space: nowrap;
+  }
+  #content {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 32px 24px 48px;
+  }
+  .page-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--text3);
+    margin-bottom: 28px;
+  }
+  .sug-floor { font-size: 12px; }
+  .sug-row { font-size: 14px; }
+  .sug-rec-title { font-size: 15px; }
+  .sug-rec-body { font-size: 14px; }
+  .sug-gain { font-size: 13px; }
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  @media (max-width: 640px) {
+    .two-col { grid-template-columns: 1fr; }
+    #page-header-sub { display: none; }
+  }
+  @media print {
+    #page-header a { display: none; }
+    #page-header { position: static; }
+  }
+</style>
+</head>
+<body>
+
+<div id="page-header">
+  <a href="index.html">← Voltar ao Mapa</a>
+  <span id="page-header-title">Análise de rede — CIMAU</span>
+  <span id="page-header-sub">Consórcio Intermunicipal do Médio Alto Uruguai</span>
+</div>
+
+<div id="content">
+  <div class="page-title">💡 Sugestões de Melhorias</div>
+  <div class="page-subtitle">Análise baseada nas medições in-loco e simulação ITU-R P.1238 · CIMAU</div>
+
+  <div class="two-col">
+    <div>
+      <div class="sug-floor">⚠ Pontos críticos — Térreo</div>
+      <div class="sug-row bad">
+        <span>Escada (ligação com andar de cima)</span>
+        <span class="sug-badge red">−86 / −89 dBm</span>
+        <span style="font-size:12px;color:var(--text3)">Sem sinal</span>
+      </div>
+      <div class="sug-row bad">
+        <span>Banheiro Feminino</span>
+        <span class="sug-badge red">−81 / −84 dBm</span>
+        <span style="font-size:12px;color:var(--text3)">Muito fraco</span>
+      </div>
+      <div class="sug-row warn">
+        <span>Banheiro PCD</span>
+        <span class="sug-badge yellow">−74 / −72 dBm</span>
+        <span style="font-size:12px;color:var(--text3)">Fraco</span>
+      </div>
+      <div class="sug-row warn">
+        <span>Recepção</span>
+        <span class="sug-badge yellow">−69 / −64 dBm</span>
+        <span style="font-size:12px;color:var(--text3)">Marginal</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="sug-floor">⚠ Pontos críticos — Subsolo</div>
+      <div class="sug-row bad">
+        <span>Arquivo de Fichas</span>
+        <span class="sug-badge red">−77 / −72 dBm</span>
+        <span style="font-size:12px;color:var(--text3)">Fraco</span>
+      </div>
+      <div class="sug-row bad">
+        <span>Arquivo — Sala de Reunião</span>
+        <span class="sug-badge red">−76 / −73 dBm</span>
+        <span style="font-size:12px;color:var(--text3)">Fraco</span>
+      </div>
+      <div class="sug-row warn">
+        <span>Placas Solares / Elétrica</span>
+        <span class="sug-badge yellow">−72 / −70 dBm</span>
+        <span style="font-size:12px;color:var(--text3)">Fraco</span>
+      </div>
+      <div class="sug-row warn">
+        <span>Banheiro Feminino</span>
+        <span class="sug-badge yellow">−70 / −57 dBm</span>
+        <span style="font-size:12px;color:var(--text3)">Fraco</span>
+      </div>
+    </div>
+  </div>
+
+  <hr class="sug-divider" style="margin:28px 0">
+  <div class="sug-floor">🛠 Recomendações</div>
+
+  <div class="sug-rec">
+    <div class="sug-rec-num">1</div>
+    <div>
+      <div class="sug-rec-title">Térreo — AP adicional no corredor superior (área dos banheiros)</div>
+      <div class="sug-rec-body">O único AP do térreo está a mais de 8 m dos banheiros com múltiplas paredes de concreto no trajeto (−20 dB cada). O banheiro feminino mede −81 dBm, abaixo do limiar de associação da maioria dos dispositivos (−80 dBm). Instalar um AP no corredor central superior — entre os banheiros e a cozinha — eliminaria as zonas mortas da escada, banheiro PCD e banheiro feminino.</div>
+      <span class="sug-gain">Melhoria estimada: +20 a +35 dB nas áreas afetadas</span>
+    </div>
+  </div>
+
+  <div class="sug-rec">
+    <div class="sug-rec-num">2</div>
+    <div>
+      <div class="sug-rec-title">Subsolo — AP na Sala de Reunião (ala superior direita)</div>
+      <div class="sug-rec-body">O arquivo está a mais de 15 m do AP atual, separado por paredes de drywall e concreto, resultando em −76/−77 dBm — sinal instável para uso operacional diário. Um AP posicionado na sala de reunião ou no corredor adjacente ao arquivo cobriria toda a ala superior direita do subsolo, incluindo os dois arquivos.</div>
+      <span class="sug-gain">Melhoria estimada: +20 a +30 dB no arquivo</span>
+    </div>
+  </div>
+
+  <div class="sug-rec">
+    <div class="sug-rec-num">3</div>
+    <div>
+      <div class="sug-rec-title">Subsolo — Repetidor ou AP na ala esquerda (farmácia / elétrica)</div>
+      <div class="sug-rec-body">Placas solares (−72 dBm) e arquivo de fichas (−77 dBm) formam uma zona de cobertura fraca no extremo esquerdo. Um ponto de acesso próximo à área da farmácia cobriria simultaneamente a ala de licitações, farmácia e sala de controle elétrico. Alternativa mais econômica: repetidor sem fio com uplink para o AP central.</div>
+      <span class="sug-gain">Melhoria estimada: +15 a +25 dB na ala esquerda</span>
+    </div>
+  </div>
+
+  <div class="sug-rec">
+    <div class="sug-rec-num">4</div>
+    <div>
+      <div class="sug-rec-title">Configurar canais fixos e não-sobrepostos</div>
+      <div class="sug-rec-body">Ambos os APs estão com canal automático (0). Com múltiplos APs ativos na mesma planta, canais devem ser fixos para evitar reconfiguração dinâmica e co-channel interference:<br>
+        • <b>2.4 GHz:</b> canais 1, 6 ou 11 (espaçamento mínimo de 5 canais entre APs vizinhos)<br>
+        • <b>5 GHz:</b> canais 36, 40, 44 ou 48 (UNII-1, sem restrição de potência)
+      </div>
+    </div>
+  </div>
+
+  <div class="sug-rec">
+    <div class="sug-rec-num">5</div>
+    <div>
+      <div class="sug-rec-title">Ativar Band Steering (BSS Transition — 802.11v) no Unifi</div>
+      <div class="sug-rec-body">O Unifi AC Lite suporta direcionamento de banda via 802.11v. Configurar band steering para mover clientes com sinal ≥ −67 dBm para 5 GHz (maior capacidade e menos congestionamento), liberando o 2.4 GHz para dispositivos distantes ou legados que dependem da maior cobertura dessa banda.</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

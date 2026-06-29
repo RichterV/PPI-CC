@@ -7,7 +7,7 @@
 body{background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden;height:100vh;display:flex;flex-direction:column;user-select:none}
 
 /* APP HEADER */
-#app-header{display:flex;align-items:center;justify-content:center;gap:16px;padding:7px 16px;background:linear-gradient(90deg,var(--bg2) 0%,#1a2236 50%,var(--bg2) 100%);border-bottom:1px solid var(--border);flex-shrink:0;position:relative}
+#app-header{display:flex;align-items:center;justify-content:center;gap:12px;padding:7px 16px;background:linear-gradient(90deg,var(--bg2) 0%,#1a2236 50%,var(--bg2) 100%);border-bottom:1px solid var(--border);flex-shrink:0;position:relative}
 #app-title{font-size:13px;font-weight:600;letter-spacing:.4px;color:transparent;background:linear-gradient(90deg,#60a5fa,#a78bfa,#60a5fa);background-size:200% auto;-webkit-background-clip:text;background-clip:text;animation:title-shine 4s linear infinite}
 @keyframes title-shine{0%{background-position:0% center}100%{background-position:200% center}}
 .header-btn{padding:4px 13px;font-size:12px;border:1px solid rgba(59,130,246,.35);border-radius:6px;background:rgba(59,130,246,.08);color:#93c5fd;cursor:pointer;font-family:var(--font);transition:all .15s;flex-shrink:0}
@@ -73,7 +73,10 @@ input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer}
 .sig-dot{width:12px;height:12px;border-radius:3px;flex-shrink:0}
 
 /* STATUS */
-#status{padding:5px 12px;font-size:11px;color:var(--text3);background:var(--bg2);border-top:1px solid var(--border);flex-shrink:0}
+#status{padding:5px 12px;font-size:11px;color:var(--text3);background:var(--bg2);border-top:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
+#footer-credit{display:flex;align-items:center;gap:7px;color:var(--text3);font-size:11px;flex-shrink:0}
+#footer-credit a{display:flex;align-items:center;color:var(--text3);transition:color .15s}
+#footer-credit a:hover{color:var(--text)}
 
 /* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;display:flex;align-items:center;justify-content:center}

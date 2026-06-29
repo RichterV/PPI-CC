@@ -189,6 +189,7 @@ function fillRR(c,x,y,w,h,r){
 
 function drawDevices(){
   const c=ctxDev; c.clearRect(0,0,W,H);
+  if(!showDevicesVis) return;
   fl().devices.forEach(d=>{
     const[sx,sy]=toScreen(d.x,d.y);
     const zf=Math.max(zoom,0.35);
@@ -266,6 +267,7 @@ function drawDeviceLbl(c,d,sx,sy,cw,ch,col){
 // ===================== DRAW MPOINTS =====================
 function drawMpoints(){
   const c=ctxMp; c.clearRect(0,0,W,H);
+  if(!showMpointsVis) return;
   fl().mpoints.forEach((p,i)=>{
     const[sx,sy]=toScreen(p.x,p.y);
     const sel=i===selectedIdx&&selectedType==='mpoint';
@@ -287,8 +289,24 @@ function drawMpoints(){
   });
 }
 
+// ===================== DISPLAY TOGGLES =====================
+let showMpointsVis = true;
+let showDevicesVis = true;
+
+function toggleMpointsVis(){
+  showMpointsVis = !showMpointsVis;
+  document.getElementById('btn-mpoints-vis').classList.toggle('active', showMpointsVis);
+  drawMpoints();
+}
+
+function toggleDevicesVis(){
+  showDevicesVis = !showDevicesVis;
+  document.getElementById('btn-devices-vis').classList.toggle('active', showDevicesVis);
+  drawDevices();
+}
+
 // ===================== ROOM LABELS =====================
-let showRoomLabels = false;
+let showRoomLabels = true;
 
 function toggleRoomLabels(){
   showRoomLabels = !showRoomLabels;
@@ -411,8 +429,8 @@ function cancelDist(){
 function setTool(t){
   if(tool==='dist') cancelDist();
   tool=t;
-  document.querySelectorAll('.tbtn[id^=btn-]').forEach(b=>b.classList.remove('active'));
-  const el=document.getElementById('btn-'+t);if(el)el.classList.add('active');
+  ['btn-measure','btn-mpoint','btn-dist'].forEach(id=>document.getElementById(id)?.classList.remove('active'));
+  if(t) { const el=document.getElementById('btn-'+t);if(el)el.classList.add('active'); }
 
   const cursors={measure:'cell', mpoint:'crosshair', dist:'crosshair'};
   intC.style.cursor=cursors[t]||'default';
@@ -422,7 +440,7 @@ function setTool(t){
     mpoint:'📌 Ponto Real: clique no local e informe o dBm medido in-loco',
     dist:'📏 Medir distância: clique no ponto inicial, depois no ponto final',
   };
-  document.getElementById('status').textContent=msgs[t]||'';
+  document.getElementById('status-text').textContent=msgs[t]||'Modo visualização | Scroll=zoom | Dir=mover';
 }
 
 // ===================== SELECTION =====================
@@ -491,7 +509,7 @@ intC.addEventListener('mousedown',e=>{
   if(tool==='dist'){
     if(!mdist){
       mdist={x1:wx,y1:wy};
-      document.getElementById('status').textContent='📏 Clique no ponto final para medir';
+      document.getElementById('status-text').textContent='📏 Clique no ponto final para medir';
     } else {
       const dx=wx-mdist.x1, dy=wy-mdist.y1;
       const distM=Math.sqrt(dx*dx+dy*dy)/GRID*(gridCm/100);
@@ -565,7 +583,7 @@ intC.addEventListener('wheel',e=>{
 document.addEventListener('keydown',e=>{
   if(['INPUT','SELECT','TEXTAREA'].includes(document.activeElement.tagName))return;
   if(e.key==='Escape'){
-    if(tool==='dist'&&mdist){ cancelDist(); document.getElementById('status').textContent='📏 Medir distância: clique no ponto inicial, depois no ponto final'; return; }
+    if(tool==='dist'&&mdist){ cancelDist(); document.getElementById('status-text').textContent='📏 Medir distância: clique no ponto inicial, depois no ponto final'; return; }
   }
   if((e.key==='Delete'||e.key==='Backspace')&&selectedType==='mpoint'&&selectedIdx>=0){
     fl().mpoints.splice(selectedIdx,1);
@@ -684,11 +702,6 @@ function openModal(html){
   document.getElementById('modal-box').classList.remove('wide');
   document.getElementById('modal-overlay').style.display='flex';
 }
-function openWideModal(html){
-  document.getElementById('modal-content').innerHTML=html;
-  document.getElementById('modal-box').classList.add('wide');
-  document.getElementById('modal-overlay').style.display='flex';
-}
 function closeModal(){
   document.getElementById('modal-overlay').style.display='none';
   document.getElementById('modal-box').classList.remove('wide');
@@ -697,74 +710,7 @@ function closeModalOverlay(e){if(e.target===document.getElementById('modal-overl
 
 // ===================== SUGGESTIONS =====================
 function showSuggestions(){
-  openWideModal(`
-    <div style="margin-bottom:18px">
-      <h3 style="margin-bottom:6px;font-size:17px">💡 Sugestões de Melhorias</h3>
-      <div style="font-size:13px;color:var(--text3)">Análise baseada nas medições in-loco e simulação ITU-R P.1238 · CIMAU</div>
-    </div>
-
-    <div class="sug-floor">⚠ Pontos críticos — Térreo</div>
-    <div class="sug-row bad"><span>Escada (ligação com andar de cima)</span><span class="sug-badge red">−86 / −89 dBm</span><span style="font-size:12px;color:var(--text3)">Sem sinal</span></div>
-    <div class="sug-row bad"><span>Banheiro Feminino</span><span class="sug-badge red">−81 / −84 dBm</span><span style="font-size:12px;color:var(--text3)">Muito fraco</span></div>
-    <div class="sug-row warn"><span>Banheiro PCD</span><span class="sug-badge yellow">−74 / −72 dBm</span><span style="font-size:12px;color:var(--text3)">Fraco</span></div>
-    <div class="sug-row warn"><span>Recepção</span><span class="sug-badge yellow">−69 / −64 dBm</span><span style="font-size:12px;color:var(--text3)">Marginal</span></div>
-
-    <div class="sug-floor">⚠ Pontos críticos — Subsolo</div>
-    <div class="sug-row bad"><span>Arquivo de Fichas</span><span class="sug-badge red">−77 / −72 dBm</span><span style="font-size:12px;color:var(--text3)">Fraco</span></div>
-    <div class="sug-row bad"><span>Arquivo — Sala de Reunião</span><span class="sug-badge red">−76 / −73 dBm</span><span style="font-size:12px;color:var(--text3)">Fraco</span></div>
-    <div class="sug-row warn"><span>Placas Solares / Elétrica</span><span class="sug-badge yellow">−72 / −70 dBm</span><span style="font-size:12px;color:var(--text3)">Fraco</span></div>
-    <div class="sug-row warn"><span>Banheiro Feminino</span><span class="sug-badge yellow">−70 / −57 dBm</span><span style="font-size:12px;color:var(--text3)">Fraco</span></div>
-
-    <hr class="sug-divider">
-    <div class="sug-floor">🛠 Recomendações</div>
-
-    <div class="sug-rec">
-      <div class="sug-rec-num">1</div>
-      <div>
-        <div class="sug-rec-title">Térreo — AP adicional no corredor superior (área dos banheiros)</div>
-        <div class="sug-rec-body">O único AP do térreo está a mais de 8 m dos banheiros com múltiplas paredes de concreto no trajeto (−20 dB cada). O banheiro feminino mede −81 dBm, abaixo do limiar de associação da maioria dos dispositivos (−80 dBm). Instalar um AP no corredor central superior — entre os banheiros e a cozinha — eliminaria as zonas mortas da escada, banheiro PCD e banheiro feminino.</div>
-        <span class="sug-gain">Melhoria estimada: +20 a +35 dB nas áreas afetadas</span>
-      </div>
-    </div>
-
-    <div class="sug-rec">
-      <div class="sug-rec-num">2</div>
-      <div>
-        <div class="sug-rec-title">Subsolo — AP na Sala de Reunião (ala superior direita)</div>
-        <div class="sug-rec-body">O arquivo está a mais de 15 m do AP atual, separado por paredes de drywall e concreto, resultando em −76/−77 dBm — sinal instável para uso operacional diário. Um AP posicionado na sala de reunião ou no corredor adjacente ao arquivo cobriria toda a ala superior direita do subsolo, incluindo os dois arquivos.</div>
-        <span class="sug-gain">Melhoria estimada: +20 a +30 dB no arquivo</span>
-      </div>
-    </div>
-
-    <div class="sug-rec">
-      <div class="sug-rec-num">3</div>
-      <div>
-        <div class="sug-rec-title">Subsolo — Repetidor ou AP na ala esquerda (farmácia / elétrica)</div>
-        <div class="sug-rec-body">Placas solares (−72 dBm) e arquivo de fichas (−77 dBm) formam uma zona de cobertura fraca no extremo esquerdo. Um ponto de acesso próximo à área da farmácia cobriria simultaneamente a ala de licitações, farmácia e sala de controle elétrico. Alternativa mais econômica: repetidor sem fio com uplink para o AP central.</div>
-        <span class="sug-gain">Melhoria estimada: +15 a +25 dB na ala esquerda</span>
-      </div>
-    </div>
-
-    <div class="sug-rec">
-      <div class="sug-rec-num">4</div>
-      <div>
-        <div class="sug-rec-title">Configurar canais fixos e não-sobrepostos</div>
-        <div class="sug-rec-body">Ambos os APs estão com canal automático (0). Com múltiplos APs ativos na mesma planta, canais devem ser fixos para evitar reconfiguração dinâmica e co-channel interference:<br>• <b>2.4 GHz:</b> canais 1, 6 ou 11 (espaçamento mínimo de 5 canais entre APs vizinhos)<br>• <b>5 GHz:</b> canais 36, 40, 44 ou 48 (UNII-1, sem restrição de potência)</div>
-      </div>
-    </div>
-
-    <div class="sug-rec">
-      <div class="sug-rec-num">5</div>
-      <div>
-        <div class="sug-rec-title">Ativar Band Steering (BSS Transition — 802.11v) no Unifi</div>
-        <div class="sug-rec-body">O Unifi AC Lite suporta direcionamento de banda via 802.11v. Configurar band steering para mover clientes com sinal ≥ −67 dBm para 5 GHz (maior capacidade e menos congestionamento), liberando o 2.4 GHz para dispositivos distantes ou legados que dependem da maior cobertura dessa banda.</div>
-      </div>
-    </div>
-
-    <div style="display:flex;justify-content:flex-end;margin-top:10px">
-      <button class="mbtn primary" style="font-size:13px;padding:7px 18px" onclick="closeModal()">Fechar</button>
-    </div>
-  `);
+  window.open('sugestoes.html', '_blank');
 }
 
 // ===================== FIT TO VIEW =====================
@@ -795,7 +741,7 @@ function fitToView(){
 // ===================== INIT =====================
 window.addEventListener('resize',resize);
 resize();
-setTool('measure');
+setTool('');
 
 fetch('data.json')
   .then(r=>r.json())

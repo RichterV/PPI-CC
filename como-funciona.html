@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Como isso funciona — PPI-CC</title>
+<link rel="icon" href="icons/fav-icon.png" type="image/png">
+<link rel="stylesheet" href="style.css">
+<style>
+  body { overflow: auto; height: auto; min-height: 100vh; flex-direction: column; user-select: text; }
+
+  #page-header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 24px;
+    background: linear-gradient(90deg, var(--bg2) 0%, #1a2236 50%, var(--bg2) 100%);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
+  }
+  #page-header a {
+    font-size: 12px; color: var(--text3); text-decoration: none;
+    padding: 4px 12px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg3); transition: all .15s; white-space: nowrap; flex-shrink: 0;
+  }
+  #page-header a:hover { color: var(--text); background: var(--border); }
+  #page-header-title {
+    font-size: 13px; font-weight: 600; letter-spacing: .4px;
+    color: transparent;
+    background: linear-gradient(90deg, #60a5fa, #a78bfa, #60a5fa);
+    background-size: 200% auto;
+    -webkit-background-clip: text; background-clip: text;
+    animation: title-shine 4s linear infinite;
+  }
+  #page-header-sub { font-size: 11px; color: var(--text3); margin-left: auto; white-space: nowrap; }
+
+  #content { max-width: 860px; margin: 0 auto; padding: 32px 24px 56px; }
+  .page-title { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .page-subtitle { font-size: 13px; color: var(--text3); margin-bottom: 32px; }
+
+  /* Seções */
+  .section { margin-bottom: 32px; }
+  .section-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .9px;
+    color: var(--text3); margin-bottom: 12px; padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-body { font-size: 14px; color: var(--text2); line-height: 1.75; }
+  .section-body b { color: var(--text); }
+
+  /* Fórmula */
+  .formula-box {
+    background: rgba(59,130,246,.07); border: 1px solid rgba(59,130,246,.22);
+    border-radius: 10px; padding: 18px 22px; margin: 16px 0;
+  }
+  .formula-main {
+    font-family: monospace; font-size: 16px; color: var(--accent);
+    letter-spacing: .5px; margin-bottom: 14px;
+  }
+  .formula-vars { display: flex; flex-direction: column; gap: 6px; }
+  .fv { display: flex; gap: 12px; font-size: 13px; }
+  .fv-name { font-family: monospace; color: var(--accent); min-width: 80px; flex-shrink: 0; }
+  .fv-desc { color: var(--text2); }
+
+  /* Tabela de paredes */
+  .wall-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+  .wall-table th {
+    text-align: left; padding: 7px 12px; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .6px; color: var(--text3);
+    border-bottom: 1px solid var(--border);
+  }
+  .wall-table td { padding: 9px 12px; color: var(--text2); border-bottom: 1px solid rgba(42,51,71,.5); }
+  .wall-table tr:last-child td { border-bottom: none; }
+  .wall-table tr:hover td { background: var(--bg3); }
+  .db-badge {
+    display: inline-block; font-family: monospace; font-size: 12px; font-weight: 700;
+    padding: 2px 9px; border-radius: 5px;
+  }
+  .db-low  { background: rgba(16,185,129,.12);  color: #10b981; }
+  .db-mid  { background: rgba(245,158,11,.12);  color: #f59e0b; }
+  .db-high { background: rgba(239,68,68,.12);   color: #ef4444; }
+
+  /* Comparação 2.4 vs 5 */
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .compare-card {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px;
+  }
+  .compare-card.band24 { border-top: 3px solid #10b981; }
+  .compare-card.band5  { border-top: 3px solid #8b5cf6; }
+  .compare-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px;
+    margin-bottom: 10px;
+  }
+  .compare-card.band24 .compare-label { color: #10b981; }
+  .compare-card.band5  .compare-label { color: #8b5cf6; }
+  .compare-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  .compare-row span:first-child { color: var(--text3); }
+  .compare-row span:last-child  { font-family: monospace; color: var(--text); font-weight: 600; }
+
+  /* Legenda de cores */
+  .legend-grid { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  .leg-row { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--text2); }
+  .leg-dot { width: 36px; height: 14px; border-radius: 4px; flex-shrink: 0; }
+
+  /* IDW */
+  .idw-steps { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  .idw-step { display: flex; gap: 14px; align-items: flex-start; }
+  .idw-num {
+    width: 26px; height: 26px; border-radius: 50%; background: rgba(59,130,246,.15);
+    border: 1px solid rgba(59,130,246,.3); color: var(--accent);
+    font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .idw-text { font-size: 13px; color: var(--text2); line-height: 1.65; }
+  .idw-text b { color: var(--text); }
+
+  @media (max-width: 600px) {
+    .compare-grid { grid-template-columns: 1fr; }
+    #page-header-sub { display: none; }
+  }
+  @media print {
+    #page-header a { display: none; }
+    #page-header { position: static; }
+  }
+</style>
+</head>
+<body>
+
+<div id="page-header">
+  <a href="index.html">← Voltar ao Mapa</a>
+  <span id="page-header-title">Análise de rede — CIMAU</span>
+  <span id="page-header-sub">Consórcio Intermunicipal do Médio Alto Uruguai</span>
+</div>
+
+<div id="content">
+  <div class="page-title">❓ Como isso funciona?</div>
+  <div class="page-subtitle">Fundamentos do cálculo do mapa de calor Wi-Fi — modelo ITU-R P.1238 com correção IDW</div>
+
+  <!-- VISÃO GERAL -->
+  <div class="section">
+    <div class="section-title">Visão geral</div>
+    <div class="section-body">
+      O mapa de calor estima a <b>potência do sinal Wi-Fi</b> (em dBm) em cada ponto da planta. Quanto mais quente a cor, mais forte o sinal e melhor a experiência do usuário. Há dois modos de exibição:
+      <ul style="margin:10px 0 0 18px;display:flex;flex-direction:column;gap:6px">
+        <li><b>Simulado</b> — calcula o sinal teoricamente com base na posição dos APs, frequência e materiais das paredes, usando o modelo log-distance indoor ITU-R P.1238.</li>
+        <li><b>Real</b> — combina a simulação com medições feitas in-loco (dBm medido com o celular em pontos âncora). A diferença entre simulação e realidade é interpolada por toda a planta via IDW.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- MODELO SIMULADO -->
+  <div class="section">
+    <div class="section-title">Modelo simulado — ITU-R P.1238 (log-distance indoor)</div>
+    <div class="section-body">
+      A perda de percurso (path loss) entre o AP e um ponto da planta é calculada pela fórmula:
+    </div>
+
+    <div class="formula-box">
+      <div class="formula-main">PL(d) = 20·log₁₀(f) − 27.55 + 10·n·log₁₀(d)</div>
+      <div class="formula-vars">
+        <div class="fv"><span class="fv-name">PL(d)</span><span class="fv-desc">Perda de percurso total em dB</span></div>
+        <div class="fv"><span class="fv-name">f</span><span class="fv-desc">Frequência em MHz — 2412 MHz para 2.4 GHz · 5500 MHz para 5 GHz</span></div>
+        <div class="fv"><span class="fv-name">d</span><span class="fv-desc">Distância em metros entre o AP e o ponto avaliado</span></div>
+        <div class="fv"><span class="fv-name">n</span><span class="fv-desc">Expoente de propagação indoor — <b>3.0</b> para 2.4 GHz · <b>3.5</b> para 5 GHz</span></div>
+        <div class="fv"><span class="fv-name">−27.55</span><span class="fv-desc">Constante de normalização FSPL a 1 metro de distância</span></div>
+      </div>
+    </div>
+
+    <div class="section-body">
+      O sinal recebido em dBm é então calculado como:
+    </div>
+    <div class="formula-box" style="margin-top:8px">
+      <div class="formula-main">S = P<sub style="font-size:11px">tx</sub> + G<sub style="font-size:11px">ant</sub> − PL(d) − ΣAtenuação<sub style="font-size:11px">paredes</sub> + ΣGanho<sub style="font-size:11px">aberturas</sub></div>
+      <div class="formula-vars" style="margin-top:10px">
+        <div class="fv"><span class="fv-name">P<sub style="font-size:10px">tx</sub></span><span class="fv-desc">Potência de transmissão do AP em dBm (padrão: 17–20 dBm)</span></div>
+        <div class="fv"><span class="fv-name">G<sub style="font-size:10px">ant</sub></span><span class="fv-desc">Ganho da antena do AP em dBi (padrão: 2–3 dBi)</span></div>
+        <div class="fv"><span class="fv-name">Σ paredes</span><span class="fv-desc">Soma das atenuações de cada parede que o sinal atravessa no trajeto AP → ponto</span></div>
+        <div class="fv"><span class="fv-name">Σ aberturas</span><span class="fv-desc">Soma dos ganhos de portas (+3 dB) e janelas (+1 dB) no trajeto</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2.4 vs 5 GHz -->
+  <div class="section">
+    <div class="section-title">Diferenças entre 2.4 GHz e 5 GHz</div>
+    <div class="section-body" style="margin-bottom:12px">
+      A mudança de banda afeta diretamente dois parâmetros do modelo, resultando em comportamentos distintos:
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-card band24">
+        <div class="compare-label">2.4 GHz</div>
+        <div class="compare-row"><span>Frequência (f)</span><span>2412 MHz</span></div>
+        <div class="compare-row"><span>Expoente (n)</span><span>3.0</span></div>
+        <div class="compare-row"><span>Fator de parede</span><span>1.0×</span></div>
+        <div class="compare-row"><span>Cobertura</span><span>Maior alcance</span></div>
+        <div class="compare-row"><span>Penetração</span><span>Melhor em paredes</span></div>
+        <div class="compare-row"><span>Canais não-sobrepostos</span><span>1, 6, 11</span></div>
+      </div>
+      <div class="compare-card band5">
+        <div class="compare-label">5 GHz</div>
+        <div class="compare-row"><span>Frequência (f)</span><span>5500 MHz</span></div>
+        <div class="compare-row"><span>Expoente (n)</span><span>3.5</span></div>
+        <div class="compare-row"><span>Fator de parede</span><span>1.5×</span></div>
+        <div class="compare-row"><span>Cobertura</span><span>Menor alcance</span></div>
+        <div class="compare-row"><span>Penetração</span><span>Mais absorvido</span></div>
+        <div class="compare-row"><span>Canais não-sobrepostos</span><span>36, 40, 44, 48…</span></div>
+      </div>
+    </div>
+
+    <div class="section-body" style="margin-top:14px">
+      O <b>fator de parede 1.5×</b> no 5 GHz vem da norma ITU-R P.2040 e estudos IEEE 802.11ax: ondas de maior frequência perdem mais energia ao atravessar materiais sólidos. Por isso, em plantas com muitas paredes de concreto (como o CIMAU), o 5 GHz pode mostrar zonas mortas maiores que o 2.4 GHz, mesmo com o AP no mesmo local.
+    </div>
+  </div>
+
+  <!-- PAREDES -->
+  <div class="section">
+    <div class="section-title">Atenuação por tipo de material (paredes e aberturas)</div>
+    <div class="section-body">
+      Cada parede que o sinal atravessa no trajeto AP → ponto reduz o sinal. Aberturas (portas e janelas abertas) recuperam parte do sinal:
+    </div>
+
+    <table class="wall-table">
+      <thead>
+        <tr>
+          <th>Material / Tipo</th>
+          <th>Atenuação</th>
+          <th>Fator 5 GHz</th>
+          <th>Observação</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>🪟 Vidro</td>
+          <td><span class="db-badge db-low">−2 dB</span></td>
+          <td>−3 dB</td>
+          <td>Janelas fechadas</td>
+        </tr>
+        <tr>
+          <td>🧱 Drywall / Gesso</td>
+          <td><span class="db-badge db-low">−3 dB</span></td>
+          <td>−4.5 dB</td>
+          <td>Paredes internas leves</td>
+        </tr>
+        <tr>
+          <td>🧱 Alvenaria / Tijolo</td>
+          <td><span class="db-badge db-mid">−10 dB</span></td>
+          <td>−15 dB</td>
+          <td>Paredes externas e divisórias</td>
+        </tr>
+        <tr>
+          <td>🏗 Concreto armado</td>
+          <td><span class="db-badge db-high">−20 dB</span></td>
+          <td>−30 dB</td>
+          <td>Lajes, pilares, paredes estruturais</td>
+        </tr>
+        <tr>
+          <td>🚪 Porta (aberta)</td>
+          <td><span class="db-badge db-low">+3 dB</span></td>
+          <td>+3 dB</td>
+          <td>Abertura livre no trajeto</td>
+        </tr>
+        <tr>
+          <td>🪟 Janela (aberta)</td>
+          <td><span class="db-badge db-low">+1 dB</span></td>
+          <td>+1 dB</td>
+          <td>Abertura parcial no trajeto</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="section-body" style="margin-top:12px">
+      <b>Exemplo:</b> Um AP a 5 m de distância transmitindo em 5 GHz, com uma parede de concreto no caminho: PL ≈ 87 dB de path loss + 30 dB de concreto = 117 dB de atenuação total. Com potência de 20 dBm e ganho de 3 dBi: sinal ≈ <b>−94 dBm</b> — abaixo do limiar de associação.
+    </div>
+  </div>
+
+  <!-- MAPA REAL / IDW -->
+  <div class="section">
+    <div class="section-title">Modo Real — Calibração com IDW (Inverse Distance Weighting)</div>
+    <div class="section-body" style="margin-bottom:14px">
+      O modo <b>Real</b> combina a simulação ITU-R com medições feitas in-loco nos pontos âncora (📌). A fórmula é:
+    </div>
+
+    <div class="formula-box">
+      <div class="formula-main">S(p) = S<sub style="font-size:11px">sim</sub>(p) + IDW(Δ, p)</div>
+      <div class="formula-vars" style="margin-top:10px">
+        <div class="fv"><span class="fv-name">S<sub style="font-size:10px">sim</sub>(p)</span><span class="fv-desc">Sinal simulado pelo modelo ITU-R no ponto p</span></div>
+        <div class="fv"><span class="fv-name">Δᵢ</span><span class="fv-desc">Erro da âncora i: dBm medido in-loco − sinal simulado na âncora i</span></div>
+        <div class="fv"><span class="fv-name">IDW</span><span class="fv-desc">Média ponderada de Δ pela distância inversa ao quadrado (p=2)</span></div>
+      </div>
+    </div>
+
+    <div class="idw-steps">
+      <div class="idw-step">
+        <div class="idw-num">1</div>
+        <div class="idw-text">Para cada ponto âncora, calcula-se o <b>erro</b>: Δᵢ = dBm_medido − dBm_simulado. Esse erro captura o que o modelo não consegue prever (reflexões, mobiliário, irregularidades da construção).</div>
+      </div>
+      <div class="idw-step">
+        <div class="idw-num">2</div>
+        <div class="idw-text">Para qualquer ponto da planta p, o IDW interpola os erros das âncoras ponderando pelo inverso da distância ao quadrado — âncoras mais próximas têm mais influência: <b>IDW = Σ(Δᵢ / dᵢ²) / Σ(1 / dᵢ²)</b>.</div>
+      </div>
+      <div class="idw-step">
+        <div class="idw-num">3</div>
+        <div class="idw-text">O sinal final em p é a simulação + o erro interpolado. A <b>física das paredes</b> vem do modelo ITU-R; o IDW apenas ajusta o viés global para que o mapa reflita a realidade medida.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEGENDA -->
+  <div class="section">
+    <div class="section-title">Legenda de cores — limiares de qualidade</div>
+    <div class="section-body" style="margin-bottom:12px">
+      Os limiares são referência IEEE 802.11 para dispositivos modernos (smartphones, notebooks, impressoras com Wi-Fi):
+    </div>
+    <div class="legend-grid">
+      <div class="leg-row"><div class="leg-dot" style="background:#10b981"></div><b style="min-width:140px">Excelente (&gt; −55 dBm)</b> — streaming 4K, VoIP, transferências pesadas sem perda</div>
+      <div class="leg-row"><div class="leg-dot" style="background:#84cc16"></div><b style="min-width:140px">Muito bom (−55 / −65)</b> — navegação fluida, videoconferência confortável</div>
+      <div class="leg-row"><div class="leg-dot" style="background:#f59e0b"></div><b style="min-width:140px">Bom (−65 / −72)</b> — uso geral estável, pequenas quedas em picos de tráfego</div>
+      <div class="leg-row"><div class="leg-dot" style="background:#f97316"></div><b style="min-width:140px">Fraco (−72 / −80)</b> — conexão instável, latência alta, reconexões frequentes</div>
+      <div class="leg-row"><div class="leg-dot" style="background:#ef4444"></div><b style="min-width:140px">Muito fraco (−80 / −90)</b> — limiar de associação; maioria dos dispositivos desconecta abaixo de −80 dBm</div>
+      <div class="leg-row"><div class="leg-dot" style="background:#1e2535;border:1px solid #2a3347"></div><b style="min-width:140px">Sem cobertura (&lt; −90 dBm)</b> — fora do alcance prático do Wi-Fi</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
