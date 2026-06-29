@@ -521,6 +521,7 @@ intC.addEventListener('mousedown',e=>{
 
   // ---- ferramenta de dBm / interferência pontual ----
   if(tool==='measure'){
+    if(measurePopup){measurePopup.remove();measurePopup=null;return;}
     const routers=f.devices.filter(d=>d.type==='router'&&(!d.freq||d.freq==='dual'||d.freq===selectedFreq));
 
     let simSig=-999;
@@ -741,7 +742,13 @@ function fitToView(){
 // ===================== INIT =====================
 window.addEventListener('resize',resize);
 resize();
-setTool('');
+setTool('measure');
+
+function dismissHint(){
+  const hint = document.getElementById('map-hint');
+  hint.classList.add('fade-out');
+  setTimeout(() => hint.style.display='none', 650);
+}
 
 fetch('data.json')
   .then(r=>r.json())

@@ -3,87 +3,73 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sugestões de Melhorias — CIMAU</title>
+<title>Análise do Projeto — PPI-CC</title>
 <link rel="icon" href="icons/fav-icon.png" type="image/png">
 <link rel="stylesheet" href="style.css">
 <style>
-  body {
-    overflow: auto;
-    height: auto;
-    min-height: 100vh;
-    flex-direction: column;
-    user-select: text;
-  }
+  body { overflow: auto; height: auto; min-height: 100vh; flex-direction: column; user-select: text; }
+
   #page-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 12px 24px;
+    display: flex; align-items: center; gap: 16px; padding: 12px 24px;
     background: linear-gradient(90deg, var(--bg2) 0%, #1a2236 50%, var(--bg2) 100%);
     border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    position: sticky; top: 0; z-index: 10;
   }
   #page-header a {
-    font-size: 12px;
-    color: var(--text3);
-    text-decoration: none;
-    padding: 4px 12px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--bg3);
-    transition: all .15s;
-    white-space: nowrap;
-    flex-shrink: 0;
+    font-size: 12px; color: var(--text3); text-decoration: none;
+    padding: 4px 12px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg3); transition: all .15s; white-space: nowrap; flex-shrink: 0;
   }
   #page-header a:hover { color: var(--text); background: var(--border); }
   #page-header-title {
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: .4px;
-    color: transparent;
+    font-size: 13px; font-weight: 600; letter-spacing: .4px; color: transparent;
     background: linear-gradient(90deg, #60a5fa, #a78bfa, #60a5fa);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    background-clip: text;
+    background-size: 200% auto; -webkit-background-clip: text; background-clip: text;
     animation: title-shine 4s linear infinite;
   }
-  #page-header-sub {
-    font-size: 11px;
-    color: var(--text3);
-    margin-left: auto;
-    white-space: nowrap;
+  #page-header-sub { font-size: 11px; color: var(--text3); margin-left: auto; white-space: nowrap; }
+
+  #content { max-width: 860px; margin: 0 auto; padding: 32px 24px 56px; }
+  .page-title { font-size: 22px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .page-subtitle { font-size: 13px; color: var(--text3); margin-bottom: 28px; }
+
+  /* Coverage cards */
+  .cov-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 32px; }
+  .cov-card {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px;
   }
-  #content {
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 32px 24px 48px;
+  .cov-card-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .9px;
+    color: var(--text3); margin-bottom: 12px;
   }
-  .page-title {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 6px;
+  .cov-bar-wrap {
+    height: 18px; border-radius: 9px; overflow: hidden; display: flex;
+    margin-bottom: 16px; background: var(--bg);
   }
-  .page-subtitle {
-    font-size: 13px;
-    color: var(--text3);
-    margin-bottom: 28px;
-  }
+  .cov-bar-seg { height: 100%; transition: width .5s ease; }
+  .cov-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .cov-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .cov-label { font-size: 12px; color: var(--text2); flex: 1; }
+  .cov-pct { font-size: 12px; font-weight: 700; color: var(--text); min-width: 36px; text-align: right; }
+  .cov-loading { font-size: 12px; color: var(--text3); display: flex; align-items: center; gap: 8px; }
+  .cov-spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Sections */
   .sug-floor { font-size: 12px; }
   .sug-row { font-size: 14px; }
   .sug-rec-title { font-size: 15px; }
   .sug-rec-body { font-size: 14px; }
   .sug-gain { font-size: 13px; }
-  .two-col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+  .sec-header {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .9px;
+    color: var(--text3); padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    margin-bottom: 14px;
   }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
   @media (max-width: 640px) {
-    .two-col { grid-template-columns: 1fr; }
+    .cov-grid, .two-col { grid-template-columns: 1fr; }
     #page-header-sub { display: none; }
   }
   @media print {
@@ -101,61 +87,41 @@
 </div>
 
 <div id="content">
-  <div class="page-title">💡 Sugestões de Melhorias</div>
-  <div class="page-subtitle">Análise baseada nas medições in-loco e simulação ITU-R P.1238 · CIMAU</div>
+  <div class="page-title">📊 Análise do projeto</div>
+  <div class="page-subtitle">Cobertura Wi-Fi e recomendações baseadas no modelo ITU-R P.1238 · CIMAU · 2.4 GHz</div>
 
-  <div class="two-col">
-    <div>
-      <div class="sug-floor">⚠ Pontos críticos — Térreo</div>
-      <div class="sug-row bad">
-        <span>Escada (ligação com andar de cima)</span>
-        <span class="sug-badge red">−86 / −89 dBm</span>
-        <span style="font-size:12px;color:var(--text3)">Sem sinal</span>
-      </div>
-      <div class="sug-row bad">
-        <span>Banheiro Feminino</span>
-        <span class="sug-badge red">−81 / −84 dBm</span>
-        <span style="font-size:12px;color:var(--text3)">Muito fraco</span>
-      </div>
-      <div class="sug-row warn">
-        <span>Banheiro PCD</span>
-        <span class="sug-badge yellow">−74 / −72 dBm</span>
-        <span style="font-size:12px;color:var(--text3)">Fraco</span>
-      </div>
-      <div class="sug-row warn">
-        <span>Recepção</span>
-        <span class="sug-badge yellow">−69 / −64 dBm</span>
-        <span style="font-size:12px;color:var(--text3)">Marginal</span>
-      </div>
+  <!-- COBERTURA POR ANDAR -->
+  <div class="sec-header">📶 Cobertura Wi-Fi por Andar</div>
+  <div class="cov-grid" id="cov-grid">
+    <div class="cov-card" id="cov-card-0">
+      <div class="cov-loading"><div class="cov-spinner"></div>Calculando...</div>
     </div>
-
-    <div>
-      <div class="sug-floor">⚠ Pontos críticos — Subsolo</div>
-      <div class="sug-row bad">
-        <span>Arquivo de Fichas</span>
-        <span class="sug-badge red">−77 / −72 dBm</span>
-        <span style="font-size:12px;color:var(--text3)">Fraco</span>
-      </div>
-      <div class="sug-row bad">
-        <span>Arquivo — Sala de Reunião</span>
-        <span class="sug-badge red">−76 / −73 dBm</span>
-        <span style="font-size:12px;color:var(--text3)">Fraco</span>
-      </div>
-      <div class="sug-row warn">
-        <span>Placas Solares / Elétrica</span>
-        <span class="sug-badge yellow">−72 / −70 dBm</span>
-        <span style="font-size:12px;color:var(--text3)">Fraco</span>
-      </div>
-      <div class="sug-row warn">
-        <span>Banheiro Feminino</span>
-        <span class="sug-badge yellow">−70 / −57 dBm</span>
-        <span style="font-size:12px;color:var(--text3)">Fraco</span>
-      </div>
+    <div class="cov-card" id="cov-card-1">
+      <div class="cov-loading"><div class="cov-spinner"></div>Calculando...</div>
     </div>
   </div>
 
-  <hr class="sug-divider" style="margin:28px 0">
-  <div class="sug-floor">🛠 Recomendações</div>
+  <!-- PONTOS CRÍTICOS -->
+  <div class="sec-header" style="margin-top:4px">⚠ Pontos críticos</div>
+  <div class="two-col" style="margin-bottom:28px">
+    <div>
+      <div class="sug-floor">Térreo</div>
+      <div class="sug-row bad"><span>Escada (ligação com andar de cima)</span><span class="sug-badge red">−86 / −89 dBm</span><span style="font-size:12px;color:var(--text3)">Sem sinal</span></div>
+      <div class="sug-row bad"><span>Banheiro Feminino</span><span class="sug-badge red">−81 / −84 dBm</span><span style="font-size:12px;color:var(--text3)">Muito fraco</span></div>
+      <div class="sug-row warn"><span>Banheiro PCD</span><span class="sug-badge yellow">−74 / −72 dBm</span><span style="font-size:12px;color:var(--text3)">Fraco</span></div>
+      <div class="sug-row warn"><span>Recepção</span><span class="sug-badge yellow">−69 / −64 dBm</span><span style="font-size:12px;color:var(--text3)">Marginal</span></div>
+    </div>
+    <div>
+      <div class="sug-floor">Subsolo</div>
+      <div class="sug-row bad"><span>Arquivo de Fichas</span><span class="sug-badge red">−77 / −72 dBm</span><span style="font-size:12px;color:var(--text3)">Fraco</span></div>
+      <div class="sug-row bad"><span>Arquivo — Sala de Reunião</span><span class="sug-badge red">−76 / −73 dBm</span><span style="font-size:12px;color:var(--text3)">Fraco</span></div>
+      <div class="sug-row warn"><span>Placas Solares / Elétrica</span><span class="sug-badge yellow">−72 / −70 dBm</span><span style="font-size:12px;color:var(--text3)">Fraco</span></div>
+      <div class="sug-row warn"><span>Banheiro Feminino</span><span class="sug-badge yellow">−70 / −57 dBm</span><span style="font-size:12px;color:var(--text3)">Fraco</span></div>
+    </div>
+  </div>
+
+  <!-- RECOMENDAÇÕES -->
+  <div class="sec-header">🛠 Recomendações</div>
 
   <div class="sug-rec">
     <div class="sug-rec-num">1</div>
@@ -204,5 +170,118 @@
   </div>
 </div>
 
+<script>
+const DEFAULT_WALL_DEFS = {
+  concrete:{db:20}, brick:{db:10}, drywall:{db:3}, glass:{db:2}, custom:{db:5}
+};
+
+function segInt(ax,ay,bx,by,cx,cy,dx,dy){
+  const d1x=bx-ax,d1y=by-ay,d2x=dx-cx,d2y=dy-cy;
+  const cross=d1x*d2y-d1y*d2x;
+  if(Math.abs(cross)<1e-10)return false;
+  const t=((cx-ax)*d2y-(cy-ay)*d2x)/cross;
+  const u=((cx-ax)*d1y-(cy-ay)*d1x)/cross;
+  return t>0&&t<1&&u>0&&u<1;
+}
+
+function computeSig(r,wx,wy,walls,openings,freq,wallDefs){
+  const GRID=24,gridCm=20;
+  const dx=wx-r.x,dy=wy-r.y;
+  const distM=Math.max(Math.sqrt(dx*dx+dy*dy)/GRID*(gridCm/100),0.05);
+  const band=r.freq==='dual'?freq:(r.freq||'2.4');
+  const n=band==='5'?3.5:3.0;
+  const fMHz=band==='5'?5500:2412;
+  const pl=20*Math.log10(fMHz)-27.55+10*n*Math.log10(distM);
+  const wallFactor=band==='5'?1.5:1.0;
+  let sig=(r.power||17)+(r.gain||2)-pl;
+  walls.forEach(w=>{
+    if(segInt(r.x,r.y,wx,wy,w.x1,w.y1,w.x2,w.y2))
+      sig-=(wallDefs[w.type]||wallDefs.custom).db*wallFactor;
+  });
+  openings.forEach(o=>{
+    if(segInt(r.x,r.y,wx,wy,o.x1,o.y1,o.x2,o.y2))
+      sig+=o.type==='door'?3:1;
+  });
+  return sig;
+}
+
+function analyzeFloor(floor, freq, wallDefs){
+  const routers=floor.devices.filter(d=>
+    d.type==='router'&&(!d.freq||d.freq==='dual'||d.freq===freq));
+  let x1=Infinity,y1=Infinity,x2=-Infinity,y2=-Infinity;
+  floor.walls.forEach(w=>{
+    x1=Math.min(x1,w.x1,w.x2);y1=Math.min(y1,w.y1,w.y2);
+    x2=Math.max(x2,w.x1,w.x2);y2=Math.max(y2,w.y1,w.y2);
+  });
+  if(x1===Infinity)return null;
+  const STEP=36;
+  let exc=0,vgood=0,good=0,weak=0,vweak=0,none=0,total=0;
+  for(let wx=x1;wx<=x2;wx+=STEP){
+    for(let wy=y1;wy<=y2;wy+=STEP){
+      let maxSig=-999;
+      routers.forEach(r=>{
+        const s=computeSig(r,wx,wy,floor.walls,floor.openings,freq,wallDefs);
+        if(s>maxSig)maxSig=s;
+      });
+      if(!routers.length)maxSig=-Infinity;
+      if(maxSig>-55)exc++;
+      else if(maxSig>-65)vgood++;
+      else if(maxSig>-72)good++;
+      else if(maxSig>-80)weak++;
+      else if(maxSig>-90)vweak++;
+      else none++;
+      total++;
+    }
+  }
+  return{exc,vgood,good,weak,vweak,none,total};
+}
+
+const CATS=[
+  {key:'exc',  color:'#10b981',label:'Excelente',sub:'> −55 dBm'},
+  {key:'vgood',color:'#84cc16',label:'Muito bom', sub:'−55 / −65 dBm'},
+  {key:'good', color:'#f59e0b',label:'Bom',       sub:'−65 / −72 dBm'},
+  {key:'weak', color:'#f97316',label:'Fraco',     sub:'−72 / −80 dBm'},
+  {key:'vweak',color:'#ef4444',label:'Muito fraco',sub:'−80 / −90 dBm'},
+  {key:'none', color:'#2a3347',label:'Sem cobertura',sub:'< −90 dBm'},
+];
+
+function p(n,t){return t?Math.round(n/t*100):0;}
+
+function renderCard(floorName, res, idx){
+  const card=document.getElementById(`cov-card-${idx}`);
+  if(!card||!res)return;
+  const bar=CATS.map(c=>{
+    const pct=p(res[c.key],res.total);
+    return pct>0?`<div class="cov-bar-seg" style="width:${pct}%;background:${c.color}" title="${c.label}: ${pct}%"></div>`:'';
+  }).join('');
+  const rows=CATS.map(c=>`
+    <div class="cov-row">
+      <div class="cov-dot" style="background:${c.color}"></div>
+      <span class="cov-label">${c.label} <span style="color:var(--text3);font-size:11px">${c.sub}</span></span>
+      <span class="cov-pct">${p(res[c.key],res.total)}%</span>
+    </div>`).join('');
+  card.innerHTML=`
+    <div class="cov-card-title">🏢 ${floorName}</div>
+    <div class="cov-bar-wrap">${bar}</div>
+    ${rows}`;
+}
+
+fetch('data.json')
+  .then(r=>r.json())
+  .then(data=>{
+    const wallDefs=Object.assign({...DEFAULT_WALL_DEFS},data.wallTypeDefs||{});
+    const freq='2.4';
+    (data.floors||[]).forEach((floor,i)=>{
+      const res=analyzeFloor(floor,freq,wallDefs);
+      renderCard(floor.name||`Andar ${i+1}`,res,i);
+    });
+  })
+  .catch(()=>{
+    ['cov-card-0','cov-card-1'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.innerHTML='<div class="cov-loading" style="color:#ef4444">Erro ao carregar dados.</div>';
+    });
+  });
+</script>
 </body>
 </html>

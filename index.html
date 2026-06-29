@@ -12,7 +12,7 @@
 <div id="app-header">
   <button class="header-btn" onclick="window.open('como-funciona.html','_blank')">❓ Como isso funciona?</button>
   <span id="app-title">Análise de rede — Consórcio Intermunicipal do Médio Alto Uruguai (CIMAU)</span>
-  <button class="header-btn" onclick="showSuggestions()">💡 Sugestões de melhorias</button>
+  <button class="header-btn" onclick="showSuggestions()">📊 Análise do projeto</button>
 </div>
 
 <!-- Floor tabs -->
@@ -61,6 +61,7 @@
     <canvas id="mpoint-canvas" style="pointer-events:none"></canvas>
     <canvas id="label-canvas" style="pointer-events:none"></canvas>
     <canvas id="interact-canvas"></canvas>
+    <div id="map-hint">🖱 Mouse direito para navegar pelo mapa &nbsp;·&nbsp; Mouse esquerdo para ver o sinal<button id="map-hint-close" onclick="dismissHint()" title="Fechar">✕</button></div>
     <div id="hud">🖱 posição: —</div>
     <div id="zoom-info">Zoom: 100% | Grid: 20cm</div>
   </div>
