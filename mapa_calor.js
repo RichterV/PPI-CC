@@ -94,6 +94,10 @@ function drawHeatmapLayer(){
   const { canvas, wx1, wy1, ww, wh } = hmapCache;
   const [sx, sy] = toScreen(wx1, wy1);
   ctxHm.save();
+  // Clip ao perímetro externo para não vazar fora das paredes
+  ctxHm.beginPath();
+  ctxHm.rect(sx, sy, ww * zoom, wh * zoom);
+  ctxHm.clip();
   ctxHm.imageSmoothingEnabled = true;
   ctxHm.imageSmoothingQuality = 'high';
   ctxHm.drawImage(canvas, sx, sy, ww * zoom, wh * zoom);
@@ -104,16 +108,15 @@ function freqRouters(f){
   return f.devices.filter(d=>d.type==='router'&&(!d.freq||d.freq==='dual'||d.freq===selectedFreq));
 }
 
-// Bounding box das paredes + margem em metros → [x1,y1,x2,y2] em coords mundo
-function computeBounds(f, marginM){
+// Bounding box das paredes externas (sem margem) → [x1,y1,x2,y2] em coords mundo
+function computeBounds(f){
   let x1=Infinity, y1=Infinity, x2=-Infinity, y2=-Infinity;
   f.walls.forEach(w=>{
     x1=Math.min(x1,w.x1,w.x2); y1=Math.min(y1,w.y1,w.y2);
     x2=Math.max(x2,w.x1,w.x2); y2=Math.max(y2,w.y1,w.y2);
   });
   if(x1===Infinity) return null;
-  const m = marginM * 100 / gridCm * GRID;
-  return [x1-m, y1-m, x2+m, y2+m];
+  return [x1, y1, x2, y2];
 }
 
 // ---- Cálculo principal (apenas quando dados mudam — não no zoom/pan) ----
@@ -127,7 +130,7 @@ function calcHeatmap(){
   if(heatmapMode === 'real'){ drawRealHeatmap(f); return; }
   if(!routers.length){ ctxHm.clearRect(0, 0, W, H); return; }
 
-  const b = computeBounds(f, 10);
+  const b = computeBounds(f);
   if(!b){ ctxHm.clearRect(0, 0, W, H); return; }
   const [bx1, by1, bx2, by2] = b;
   const ww = bx2 - bx1, wh = by2 - by1;
@@ -187,7 +190,7 @@ function drawRealHeatmap(f){
   });
 
   const idwPow = 2;
-  const b = computeBounds(f, 10);
+  const b = computeBounds(f);
   if(!b){ ctxHm.clearRect(0, 0, W, H); return; }
   const [bx1, by1, bx2, by2] = b;
   const ww = bx2 - bx1, wh = by2 - by1;
