@@ -168,6 +168,52 @@
       <div class="sug-rec-body">O Unifi AC Lite suporta direcionamento de banda via 802.11v. Configurar band steering para mover clientes com sinal ≥ −67 dBm para 5 GHz (maior capacidade e menos congestionamento), liberando o 2.4 GHz para dispositivos distantes ou legados que dependem da maior cobertura dessa banda.</div>
     </div>
   </div>
+
+  <div class="sec-header" style="margin-top:32px">🔒 Infraestrutura e Segurança</div>
+
+  <div class="sug-rec">
+    <div class="sug-rec-num">6</div>
+    <div>
+      <div class="sug-rec-title">Atualização do RouterOS do roteador MikroTik (v6 → v7)</div>
+      <div class="sug-rec-body">O RouterBOARD que atua como gateway e servidor DHCP da rede possivelmente opera na versão 6 do RouterOS — comum em ambientes sem responsável de TI dedicado. Versões antigas acumulam vulnerabilidades críticas exploradas em larga escala. Recomenda-se migrar em duas etapas: primeiro atualizar para o último release da v6 (6.49.x), realizar backup e export da configuração, e então subir para a v7, atualizando também o firmware via <code>/system routerboard upgrade</code>. A v7 traz kernel atualizado, correções contínuas de segurança e suporte a recursos modernos como WireGuard.</div>
+    </div>
+  </div>
+
+  <div class="sug-rec">
+    <div class="sug-rec-num">7</div>
+    <div>
+      <div class="sug-rec-title">Configuração de Firewall no gateway</div>
+      <div class="sug-rec-body">É comum encontrar RouterBOARDs em produção sem regras de firewall na chain <code>input</code>, deixando os serviços de gerência do próprio roteador expostos à Internet. Recomenda-se adotar política <em>default drop</em> na chain <code>input</code>, permitindo apenas conexões <code>established/related</code> e o acesso de gerência (Winbox/SSH) a partir de uma address-list restrita à rede interna. Complementarmente: desabilitar serviços não utilizados (telnet, ftp, www, api), desativar mac-winbox, mac-telnet e neighbor discovery na interface WAN, e renomear/desabilitar o usuário padrão <code>admin</code> com senhas fortes. A maioria dos comprometimentos de MikroTik ocorre por gerência exposta à Internet.</div>
+      <span class="sug-gain">Melhoria: redução da superfície de ataque e proteção do plano de gerência</span>
+    </div>
+  </div>
+
+  <div class="sug-rec">
+    <div class="sug-rec-num">8</div>
+    <div>
+      <div class="sug-rec-title">Revisão do DHCP Server (lease time, reservas estáticas e pool)</div>
+      <div class="sug-rec-body">O servidor DHCP deve ser revisado em três pontos: <b>(1) lease time</b> — valores muito curtos (ex.: 10 min) geram renovações constantes e churn na tabela ARP; para uma rede administrativa com baixa rotatividade, um lease de 8 a 24 horas é mais adequado; <b>(2) reservas estáticas</b> — impressoras, APs Unifi e servidores devem receber IP fixo via reserva por MAC, garantindo endereçamento previsível para gerência e monitoramento; <b>(3) dimensionamento do pool</b> — reservar uma faixa fora do pool dinâmico para infraestrutura, evitando conflitos de endereço.</div>
+      <span class="sug-gain">Melhoria: estabilidade de endereçamento e previsibilidade para gerência da rede</span>
+    </div>
+  </div>
+
+  <div class="sug-rec">
+    <div class="sug-rec-num">9</div>
+    <div>
+      <div class="sug-rec-title">Segmentação da rede em VLANs e rede Wi-Fi para visitantes</div>
+      <div class="sug-rec-body">Atualmente todos os dispositivos compartilham um único domínio de broadcast: estações administrativas, impressoras e visitantes conectados ao Wi-Fi. Recomenda-se segmentar a rede em VLANs (administrativa, Wi-Fi corporativo e Wi-Fi visitantes), com roteamento inter-VLAN e regras de firewall centralizadas no RouterBOARD. Nos APs Unifi, criar um SSID de visitantes mapeado à VLAN guest com <em>client isolation</em> ativado, impedindo que dispositivos externos alcancem os equipamentos internos. A segmentação limita a propagação lateral em caso de dispositivo comprometido e reduz tráfego de broadcast.</div>
+      <span class="sug-gain">Melhoria: isolamento de tráfego e contenção de incidentes de segurança</span>
+    </div>
+  </div>
+
+  <div class="sug-rec">
+    <div class="sug-rec-num">10</div>
+    <div>
+      <div class="sug-rec-title">Backup automatizado das configurações do gateway</div>
+      <div class="sug-rec-body">Não há evidência de rotina de backup da configuração do gateway. No RouterOS, recomenda-se agendar via <code>/system scheduler</code> a geração periódica do backup binário (<code>/system backup save</code>) e do export em texto (<code>/export file=...</code>), com cópia automática para fora do equipamento via FTP/SFTP ou e-mail. O export em texto é especialmente importante por ser legível e portável entre versões e modelos — em caso de falha de hardware, a rede pode ser restabelecida em minutos em um equipamento substituto.</div>
+      <span class="sug-gain">Melhoria: redução do RTO (Recovery Time Objective) em caso de falha do gateway</span>
+    </div>
+  </div>
 </div>
 
 <script>
