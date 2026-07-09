@@ -101,6 +101,20 @@
     </div>
   </div>
 
+  <!-- TOPOLOGIA DE REDE -->
+  <div class="sec-header" style="margin-top:4px">🖧 Topologia de Rede</div>
+  <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px 16px 12px;margin-bottom:28px">
+    <svg id="topo-svg" viewBox="0 0 800 435" preserveAspectRatio="xMidYMid meet" style="display:block;width:100%;max-width:800px;margin:0 auto"></svg>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:10px;font-size:11px;color:var(--text3)">
+      <span style="display:inline-flex;align-items:center;gap:5px"><svg width="24" height="4"><line x1="0" y1="2" x2="24" y2="2" stroke="#60a5fa" stroke-width="2"/></svg>Cabeado</span>
+      <span style="display:inline-flex;align-items:center;gap:5px"><svg width="24" height="4"><line x1="0" y1="2" x2="24" y2="2" stroke="#f59e0b" stroke-width="2"/></svg>WAN</span>
+      <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:9px;height:9px;background:#3b82f6;border-radius:2px;display:inline-block"></span>Roteador / Switch</span>
+      <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:9px;height:9px;background:#7c3aed;border-radius:2px;display:inline-block"></span>Ponto de Acesso Wi-Fi</span>
+      <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:9px;height:9px;background:#059669;border-radius:2px;display:inline-block"></span>Estação / Impressora</span>
+      <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:9px;height:9px;background:#475569;border-radius:2px;display:inline-block"></span>Dispositivo</span>
+    </div>
+  </div>
+
   <!-- PONTOS CRÍTICOS -->
   <div class="sec-header" style="margin-top:4px">⚠ Pontos críticos</div>
   <div class="two-col" style="margin-bottom:28px">
@@ -311,6 +325,108 @@ function renderCard(floorName, res, idx){
     <div class="cov-bar-wrap">${bar}</div>
     ${rows}`;
 }
+
+(function buildTopo(){
+  const svg=document.getElementById('topo-svg');
+  if(!svg)return;
+  const NS='http://www.w3.org/2000/svg';
+
+  const dk=window.matchMedia('(prefers-color-scheme:dark)').matches
+    ||document.documentElement.dataset.theme==='dark';
+  const C={
+    bg:dk?'#0d1117':'#f8fafc',card:dk?'#161b26':'#ffffff',
+    txt:dk?'#f0f6fc':'#1e293b',txt2:dk?'#8b949e':'#64748b',
+    wan:'#f59e0b',wire:'#60a5fa',
+    router:'#3b82f6',sw:'#1d4ed8',ap:'#7c3aed',pc:'#059669',pr:'#0d9488',oth:'#475569'
+  };
+
+  function mk(tag,attrs,text){
+    const e=document.createElementNS(NS,tag);
+    Object.entries(attrs||{}).forEach(([k,v])=>e.setAttribute(k,v));
+    if(text!=null)e.textContent=text;
+    return e;
+  }
+
+  svg.appendChild(mk('rect',{x:0,y:0,width:800,height:435,fill:C.bg,rx:8}));
+
+  // Floor zone backgrounds
+  [[10,258,380,172,'#60a5fa','TÉRREO'],[410,258,380,172,'#a78bfa','SUBSOLO']].forEach(([x,y,w,h,col,lbl],i)=>{
+    const grp=mk('g');
+    grp.appendChild(mk('rect',{x,y,width:w,height:h,rx:10,fill:col,opacity:.08}));
+    grp.appendChild(mk('rect',{x,y,width:w,height:h,rx:10,fill:'none',stroke:col,'stroke-width':1,opacity:.3}));
+    const tx=i===0?x+10:x+w-10, anchor=i===0?'start':'end';
+    grp.appendChild(mk('text',{x:tx,y:y+18,fill:col,opacity:.55,'font-size':9,'font-weight':700,
+      'font-family':'system-ui,sans-serif','text-anchor':anchor},lbl));
+    svg.appendChild(grp);
+  });
+
+  const NW=118,NH=46;
+  const N={
+    internet:{x:400,y:38, lbl:'Internet',        sub:'',               col:C.wan   },
+    mikrotik:{x:400,y:127,lbl:'MikroTik RB',     sub:'Gateway · DHCP', col:C.router},
+    sw:      {x:400,y:222,lbl:'Switch',           sub:'Rack — Térreo',  col:C.sw    },
+    ap_t:    {x:145,y:310,lbl:'Unifi AC Lite',   sub:'Térreo · Wi-Fi', col:C.ap    },
+    pcs_t:   {x:70, y:400,lbl:'PCs (\xD75)',      sub:'T\xE9rreo',      col:C.pc    },
+    print_t: {x:195,y:400,lbl:'Impressoras \xD74',sub:'T\xE9rreo',      col:C.pr    },
+    misc_t:  {x:330,y:310,lbl:'TV \xB7 Rel. Ponto',sub:'Audit\xF3rio', col:C.oth   },
+    ap_s:    {x:540,y:310,lbl:'Unifi AC Lite',   sub:'Subsolo · Wi-Fi',col:C.ap    },
+    pcs_s:   {x:475,y:400,lbl:'PCs (\xD76)',      sub:'Subsolo',        col:C.pc    },
+    print_s: {x:623,y:400,lbl:'Impressoras \xD75',sub:'Subsolo',        col:C.pr    },
+    misc_s:  {x:715,y:310,lbl:'TV \xB7 Ctrl.',   sub:'Pl. Solares',    col:C.oth   },
+  };
+
+  // Draw edges first (nodes will paint over their endpoints)
+  const eG=mk('g');
+  [
+    ['internet','mikrotik','WAN',C.wan],
+    ['mikrotik','sw','LAN',C.wire],
+    ['sw','ap_t','PoE',C.wire],['sw','misc_t','',C.wire],
+    ['sw','pcs_t','',C.wire],['sw','print_t','',C.wire],
+    ['sw','ap_s','PoE',C.wire],['sw','misc_s','',C.wire],
+    ['sw','pcs_s','',C.wire],['sw','print_s','',C.wire],
+  ].forEach(([fk,tk,lbl,col])=>{
+    const a=N[fk],b=N[tk],cpY=(a.y+b.y)/2;
+    eG.appendChild(mk('path',{
+      d:`M${a.x},${a.y} C${a.x},${cpY} ${b.x},${cpY} ${b.x},${b.y}`,
+      fill:'none',stroke:col,'stroke-width':1.8,opacity:.65
+    }));
+    if(lbl){
+      const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;
+      eG.appendChild(mk('rect',{x:mx-14,y:my-8,width:28,height:14,fill:C.card,rx:3}));
+      eG.appendChild(mk('text',{x:mx,y:my+4,fill:col,'font-size':8,'font-weight':700,
+        'font-family':'system-ui,sans-serif','text-anchor':'middle'},lbl));
+    }
+  });
+  svg.appendChild(eG);
+
+  // Draw nodes on top of edges; hover/click brings card to front
+  const nG=mk('g');
+  Object.values(N).forEach(n=>{
+    const x=n.x-NW/2,y=n.y-NH/2,grp=mk('g');
+    grp.style.cursor='pointer';
+    const rect=mk('rect',{x,y,width:NW,height:NH,rx:8,fill:C.card,
+      stroke:n.col,'stroke-width':1.5});
+    grp.appendChild(rect);
+    grp.appendChild(mk('text',{x:n.x,y:n.y+5,fill:C.txt,'font-size':10,'font-weight':600,
+      'font-family':'system-ui,sans-serif','text-anchor':'middle','dominant-baseline':'middle'},n.lbl));
+    if(n.sub)grp.appendChild(mk('text',{x:n.x,y:n.y+19,fill:C.txt2,'font-size':9,
+      'font-family':'system-ui,sans-serif','text-anchor':'middle'},n.sub));
+
+    function bringFront(){
+      nG.appendChild(grp);
+      rect.setAttribute('stroke-width','2.5');
+    }
+    function resetBack(){
+      rect.setAttribute('stroke-width','1.5');
+    }
+    grp.addEventListener('mouseenter', bringFront);
+    grp.addEventListener('mouseleave', resetBack);
+    grp.addEventListener('click', bringFront);
+
+    nG.appendChild(grp);
+  });
+  svg.appendChild(nG);
+})();
 
 fetch('data.json')
   .then(r=>r.json())

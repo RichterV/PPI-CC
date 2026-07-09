@@ -45,16 +45,18 @@ const wrap   = document.getElementById('canvas-wrap');
 const bgC    = document.getElementById('bg-canvas');
 const bgImgC = document.getElementById('bg-img-canvas');
 const hmC    = document.getElementById('heatmap-canvas');
-const wallC  = document.getElementById('wall-canvas');
-const devC   = document.getElementById('device-canvas');
+const wallC   = document.getElementById('wall-canvas');
+const cableC  = document.getElementById('cable-canvas');
+const devC    = document.getElementById('device-canvas');
 const mpC    = document.getElementById('mpoint-canvas');
 const lblC   = document.getElementById('label-canvas');
 const intC   = document.getElementById('interact-canvas');
 const ctxBg    = bgC.getContext('2d');
 const ctxBgImg = bgImgC.getContext('2d');
 const ctxHm    = hmC.getContext('2d');
-const ctxWall  = wallC.getContext('2d');
-const ctxDev   = devC.getContext('2d');
+const ctxWall   = wallC.getContext('2d');
+const ctxCable  = cableC.getContext('2d');
+const ctxDev    = devC.getContext('2d');
 const ctxMp    = mpC.getContext('2d');
 const ctxLbl   = lblC.getContext('2d');
 const ctxInt   = intC.getContext('2d');
@@ -63,7 +65,7 @@ let W=0, H=0;
 
 function resize(){
   W=wrap.clientWidth; H=wrap.clientHeight;
-  [bgC,bgImgC,hmC,wallC,devC,mpC,lblC,intC].forEach(c=>{c.width=W;c.height=H});
+  [bgC,bgImgC,hmC,wallC,cableC,devC,mpC,lblC,intC].forEach(c=>{c.width=W;c.height=H});
   redrawAll();
 }
 
@@ -74,7 +76,7 @@ function worldToCm(w){ return (w/GRID)*gridCm; }
 function worldToM(w){ return worldToCm(w)/100; }
 
 function redrawAll(){
-  drawBg();drawBgImg();drawWalls();drawDevices();drawMpoints();drawRoomLabels();drawHeatmapLayer();
+  drawBg();drawBgImg();drawWalls();drawCables();drawDevices();drawMpoints();drawRoomLabels();drawHeatmapLayer();
   drawDistPreview();
 }
 
@@ -305,6 +307,107 @@ function toggleDevicesVis(){
   drawDevices();
 }
 
+let showCablesVis = true;
+function toggleCablesVis(){
+  showCablesVis = !showCablesVis;
+  document.getElementById('btn-cables-vis').classList.toggle('active', showCablesVis);
+  drawCables();
+}
+
+function drawCables(){
+  const c = ctxCable;
+  c.clearRect(0, 0, W, H);
+  if(!showCablesVis) return;
+
+  const devs = fl().devices;
+  if(!devs || devs.length < 2) return;
+
+  const racks = devs.filter(d =>
+    d.typeLabel === 'Rack' || (d.name && /rack/i.test(d.name))
+  );
+  const sources = racks.length ? racks : devs.filter(d => d.type === 'router');
+  if(!sources.length) return;
+
+  // Cor por tipo de dispositivo (mesmas do drawDevices)
+  const TYPE_COL = {
+    router:'#3b82f6', pc:'#22c55e', notebook:'#6366f1',
+    printer:'#f59e0b', switch:'#06b6d4', custom:'#64748b'
+  };
+  function cableCol(d){
+    if(d.type==='router' && d.freq==='5') return '#8b5cf6';
+    return TYPE_COL[d.type] || '#64748b';
+  }
+
+  // Curva S entre dois pontos (Bézier cúbico com CP no eixo vertical)
+  function scurve(ax, ay, bx, by){
+    const cy = (ay + by) / 2;
+    c.beginPath();
+    c.moveTo(ax, ay);
+    c.bezierCurveTo(ax, cy, bx, cy, bx, by);
+  }
+
+  c.save();
+  c.lineCap  = 'round';
+  c.lineJoin = 'round';
+
+  sources.forEach(src => {
+    const [sx, sy] = toScreen(src.x, src.y);
+
+    devs.forEach(dst => {
+      if(dst === src) return;
+      const [dx, dy] = toScreen(dst.x, dst.y);
+      const col = cableCol(dst);
+
+      // Camada 1 — glow externo difuso
+      c.globalAlpha = 0.10;
+      c.strokeStyle = col;
+      c.lineWidth   = Math.max(7, 10 * zoom);
+      c.shadowColor = col;
+      c.shadowBlur  = 16;
+      scurve(sx, sy, dx, dy); c.stroke();
+
+      // Camada 2 — corpo do cabo
+      c.globalAlpha = 0.70;
+      c.strokeStyle = col;
+      c.lineWidth   = Math.max(1.5, 2.2 * zoom);
+      c.shadowColor = col;
+      c.shadowBlur  = 4;
+      scurve(sx, sy, dx, dy); c.stroke();
+
+      // Camada 3 — realce branco central
+      c.globalAlpha = 0.20;
+      c.strokeStyle = '#ffffff';
+      c.lineWidth   = Math.max(0.4, 0.7 * zoom);
+      c.shadowBlur  = 0;
+      scurve(sx, sy, dx, dy); c.stroke();
+
+      // Conector no dispositivo de destino
+      const r = Math.max(2.5, 3.5 * zoom);
+      c.globalAlpha = 1;
+      c.fillStyle   = col;
+      c.strokeStyle = '#0d1117';
+      c.lineWidth   = Math.max(1, 1.5 * zoom);
+      c.shadowColor = col;
+      c.shadowBlur  = 6;
+      c.beginPath(); c.arc(dx, dy, r, 0, Math.PI * 2);
+      c.fill(); c.stroke();
+    });
+
+    // Marcador do Rack — âmbar com glow
+    c.shadowColor = '#f59e0b';
+    c.shadowBlur  = 18;
+    c.globalAlpha = 1;
+    c.fillStyle   = '#f59e0b';
+    c.strokeStyle = '#0d1117';
+    c.lineWidth   = Math.max(1.5, 2 * zoom);
+    const sr = Math.max(5, 6.5 * zoom);
+    c.beginPath(); c.arc(sx, sy, sr, 0, Math.PI * 2);
+    c.fill(); c.stroke();
+  });
+
+  c.restore();
+}
+
 // ===================== ROOM LABELS =====================
 let showRoomLabels = true;
 
@@ -504,6 +607,7 @@ intC.addEventListener('mousedown',e=>{
   if(e.button===2){panning=true;panSX=sx;panSY=sy;panOX=panX;panOY=panY;showWallTooltip(null,null,0,0);intC.style.cursor='grabbing';return}
 
   const f=fl();
+  if(mpointPopup){mpointPopup.remove();mpointPopup=null;}
 
   // ---- ferramenta de distância ----
   if(tool==='dist'){
@@ -517,6 +621,17 @@ intC.addEventListener('mousedown',e=>{
       cancelDist();
     }
     return;
+  }
+
+  // ---- clique em mpoint: mostra popup com dBm + velocidade ----
+  if(tool!=='mpoint'&&showMpointsVis){
+    const mi=hitMpoint(wx,wy);
+    if(mi>=0){
+      if(measurePopup){measurePopup.remove();measurePopup=null;}
+      selectEl('mpoint',mi);
+      showMpointPopup(sx,sy,f.mpoints[mi]);
+      return;
+    }
   }
 
   // ---- ferramenta de dBm / interferência pontual ----
@@ -539,8 +654,6 @@ intC.addEventListener('mousedown',e=>{
 
   if(tool==='mpoint'){openMpointModal(wx,wy);return;}
 
-  const mi=hitMpoint(wx,wy);
-  if(mi>=0){selectEl('mpoint',mi);return;}
   selectEl(null,-1);
 });
 
@@ -595,6 +708,28 @@ document.addEventListener('keydown',e=>{
 
 // ===================== MEASURE POPUP (dBm) =====================
 let measurePopup=null;
+let mpointPopup=null;
+function showMpointPopup(sx,sy,p){
+  if(mpointPopup)mpointPopup.remove();
+  const active=activeDbm(p);
+  const col=dbmToColor(active);
+  const qual=active>-55?'Excelente':active>-65?'Muito bom':active>-72?'Bom':active>-80?'Fraco':active>-90?'Muito fraco':'Sem sinal';
+  const hasSpeed=p.download!=null&&p.upload!=null;
+  const div=document.createElement('div');
+  div.style.cssText=`position:absolute;left:${Math.min(sx+14,W-210)}px;top:${Math.max(sy-12,4)}px;background:rgba(15,17,23,.96);border:1px solid ${col};border-radius:10px;padding:10px 14px;font-size:12px;color:#e2e8f0;z-index:20;pointer-events:none;min-width:185px`;
+  div.innerHTML=`
+    <div style="font-weight:700;font-size:13px;color:#f1f5f9;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid #1e2535;line-height:1.3">${p.label||'Ponto'}</div>
+    <div style="color:${col};font-weight:700;font-size:16px;margin-bottom:1px">${active.toFixed(1)} dBm</div>
+    <div style="color:#64748b;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">${qual}</div>
+    <div style="color:#94a3b8;font-size:11px">📡 2.4 GHz: ${p.dbm} dBm</div>
+    <div style="color:#94a3b8;font-size:11px;margin-bottom:${hasSpeed?'7':'0'}px">📡 5 GHz: ${p.dbm5??p.dbm} dBm</div>
+    ${hasSpeed?`<div style="padding-top:6px;border-top:1px solid #1e2535">
+      <div style="color:#60a5fa;font-size:11px;margin-bottom:2px">⬇ Download: <b>${p.download} Mbps</b></div>
+      <div style="color:#a78bfa;font-size:11px">⬆ Upload: <b>${p.upload} Mbps</b></div>
+    </div>`:''}`;
+  wrap.appendChild(div);mpointPopup=div;
+  setTimeout(()=>{div.remove();if(mpointPopup===div)mpointPopup=null},6000);
+}
 function showMeasurePopup(sx,sy,simDbm,calibDbm,mx,my){
   if(measurePopup)measurePopup.remove();
   const displayDbm=calibDbm!==null?calibDbm:simDbm;
