@@ -65,7 +65,12 @@ let W=0, H=0;
 
 function resize(){
   W=wrap.clientWidth; H=wrap.clientHeight;
-  [bgC,bgImgC,hmC,wallC,cableC,devC,mpC,lblC,intC].forEach(c=>{c.width=W;c.height=H});
+  const dpr=window.devicePixelRatio||1;
+  [bgC,bgImgC,hmC,wallC,cableC,devC,mpC,lblC,intC].forEach(c=>{
+    c.width=W*dpr; c.height=H*dpr;
+    c.style.width=W+'px'; c.style.height=H+'px';
+  });
+  [ctxBg,ctxBgImg,ctxHm,ctxWall,ctxCable,ctxDev,ctxMp,ctxLbl,ctxInt].forEach(ctx=>ctx.setTransform(dpr,0,0,dpr,0,0));
   redrawAll();
 }
 
