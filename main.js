@@ -716,7 +716,7 @@ function showMpointPopup(sx,sy,p){
   const qual=active>-55?'Excelente':active>-65?'Muito bom':active>-72?'Bom':active>-80?'Fraco':active>-90?'Muito fraco':'Sem sinal';
   const hasSpeed=p.download!=null&&p.upload!=null;
   const div=document.createElement('div');
-  div.style.cssText=`position:absolute;left:${Math.min(sx+14,W-210)}px;top:${Math.max(sy-12,4)}px;background:rgba(15,17,23,.96);border:1px solid ${col};border-radius:10px;padding:10px 14px;font-size:12px;color:#e2e8f0;z-index:20;pointer-events:none;min-width:185px`;
+  div.style.cssText=`position:absolute;left:0px;top:0px;background:rgba(15,17,23,.96);border:1px solid ${col};border-radius:10px;padding:10px 14px;font-size:12px;color:#e2e8f0;z-index:20;pointer-events:none;min-width:185px;visibility:hidden`;
   div.innerHTML=`
     <div style="font-weight:700;font-size:13px;color:#f1f5f9;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid #1e2535;line-height:1.3">${p.label||'Ponto'}</div>
     <div style="color:${col};font-weight:700;font-size:16px;margin-bottom:1px">${active.toFixed(1)} dBm</div>
@@ -728,7 +728,21 @@ function showMpointPopup(sx,sy,p){
       <div style="color:#a78bfa;font-size:11px">⬆ Upload: <b>${p.upload} Mbps</b></div>
     </div>`:''}`;
   wrap.appendChild(div);mpointPopup=div;
+  placePopup(div,sx,sy);
   setTimeout(()=>{div.remove();if(mpointPopup===div)mpointPopup=null},6000);
+}
+// Posiciona um popup perto de (sx,sy) mantendo-o dentro dos limites do container
+function placePopup(div,sx,sy,offX=14,offY=-12,margin=4){
+  const cw=wrap.clientWidth, ch=wrap.clientHeight;
+  const w=div.offsetWidth, h=div.offsetHeight;
+  let left=sx+offX, top=sy+offY;
+  if(left+w>cw-margin) left=sx-offX-w; // não coube à direita: mostra à esquerda do ponto
+  if(left<margin) left=margin;
+  if(top+h>ch-margin) top=ch-margin-h; // não coube embaixo: sobe até caber
+  if(top<margin) top=margin;
+  div.style.left=left+'px';
+  div.style.top=top+'px';
+  div.style.visibility='visible';
 }
 function showMeasurePopup(sx,sy,simDbm,calibDbm,mx,my){
   if(measurePopup)measurePopup.remove();
@@ -736,7 +750,7 @@ function showMeasurePopup(sx,sy,simDbm,calibDbm,mx,my){
   const col=dbmToColor(displayDbm);
   const quality=displayDbm>-55?'Excelente':displayDbm>-65?'Muito bom':displayDbm>-72?'Bom':displayDbm>-80?'Fraco':displayDbm>-90?'Muito fraco':'Sem sinal';
   const div=document.createElement('div');
-  div.style.cssText=`position:absolute;left:${sx+14}px;top:${sy-12}px;background:rgba(15,17,23,.96);border:1px solid ${col};border-radius:8px;padding:9px 13px;font-size:12px;color:#e2e8f0;z-index:20;pointer-events:none;min-width:160px`;
+  div.style.cssText=`position:absolute;left:0px;top:0px;background:rgba(15,17,23,.96);border:1px solid ${col};border-radius:8px;padding:9px 13px;font-size:12px;color:#e2e8f0;z-index:20;pointer-events:none;min-width:160px;visibility:hidden`;
   div.innerHTML=`
     <div style="color:${col};font-weight:700;font-size:15px;margin-bottom:4px">${displayDbm.toFixed(1)} dBm</div>
     <div style="color:#64748b;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">${quality}</div>
@@ -748,6 +762,7 @@ function showMeasurePopup(sx,sy,simDbm,calibDbm,mx,my){
     }
     <div style="color:#475569;font-size:10px;margin-top:4px">📍 ${mx.toFixed(2)} m, ${my.toFixed(2)} m</div>`;
   wrap.appendChild(div);measurePopup=div;
+  placePopup(div,sx,sy);
   setTimeout(()=>{div.remove();if(measurePopup===div)measurePopup=null},4000);
 }
 
@@ -756,7 +771,7 @@ let distPopup=null;
 function showDistPopup(sx,sy,distM,wx1,wy1,wx2,wy2){
   if(distPopup)distPopup.remove();
   const div=document.createElement('div');
-  div.style.cssText=`position:absolute;left:${sx+14}px;top:${sy-12}px;background:rgba(15,17,23,.96);border:1px solid #3b82f6;border-radius:8px;padding:9px 13px;font-size:12px;color:#e2e8f0;z-index:20;pointer-events:none;min-width:140px`;
+  div.style.cssText=`position:absolute;left:0px;top:0px;background:rgba(15,17,23,.96);border:1px solid #3b82f6;border-radius:8px;padding:9px 13px;font-size:12px;color:#e2e8f0;z-index:20;pointer-events:none;min-width:140px;visibility:hidden`;
   const dx=wx2-wx1, dy=wy2-wy1;
   const horizM=Math.abs(worldToM(dx)), vertM=Math.abs(worldToM(dy));
   div.innerHTML=`
@@ -765,6 +780,7 @@ function showDistPopup(sx,sy,distM,wx1,wy1,wx2,wy2){
     <div style="color:#94a3b8;font-size:11px">↔ Horizontal: ${horizM.toFixed(2)} m</div>
     <div style="color:#94a3b8;font-size:11px">↕ Vertical: ${vertM.toFixed(2)} m</div>`;
   wrap.appendChild(div);distPopup=div;
+  placePopup(div,sx,sy);
   setTimeout(()=>{div.remove();if(distPopup===div)distPopup=null},5000);
 }
 
